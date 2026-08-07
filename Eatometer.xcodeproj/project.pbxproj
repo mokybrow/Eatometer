@@ -1,0 +1,932 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0B0C743C2F8FDA29007D48F9 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B0C743B2F8FDA29007D48F9 /* StoreKit.framework */; };
+		0B1615EC2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2 in Frameworks */ = {isa = PBXBuildFile; productRef = 0B1615EB2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2 */; };
+		0B1615EE2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2Posix in Frameworks */ = {isa = PBXBuildFile; productRef = 0B1615ED2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2Posix */; };
+		0B1615F02F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2TransportServices in Frameworks */ = {isa = PBXBuildFile; productRef = 0B1615EF2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2TransportServices */; };
+		0B7D18062F90E03800BB1B88 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B7D18052F90E03800BB1B88 /* WidgetKit.framework */; };
+		0B7D18082F90E03800BB1B88 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0B7D18072F90E03800BB1B88 /* SwiftUI.framework */; };
+		0B7D18192F90E03A00BB1B88 /* EatometerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0B7D18042F90E03800BB1B88 /* EatometerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		0BA0C0002F7138AC00FB882 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA0C0002F7138AC00FB87F4 /* NotificationService.swift */; };
+		0BE67E7D2F9610FF0013B23D /* EatometerWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 0BE67E732F9610FE0013B23D /* EatometerWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AA1000012F7138AC00FB87F3 /* SwiftProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = AA1000202F7138AC00FB87F3 /* SwiftProtobuf */; };
+		AA1000022F7138AC00FB87F3 /* GRPCCore in Frameworks */ = {isa = PBXBuildFile; productRef = AA1000212F7138AC00FB87F3 /* GRPCCore */; };
+		AA1000032F7138AC00FB87F3 /* GRPCProtobuf in Frameworks */ = {isa = PBXBuildFile; productRef = AA1000222F7138AC00FB87F3 /* GRPCProtobuf */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0B7D18172F90E03A00BB1B88 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0BA0B29C2F7138AC00FB87F3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0B7D18032F90E03800BB1B88;
+			remoteInfo = EatometerWidgetExtension;
+		};
+		0BE67E7B2F9610FF0013B23D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0BA0B29C2F7138AC00FB87F3 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0BE67E722F9610FE0013B23D;
+			remoteInfo = "EatometerWatch Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0B7D181A2F90E03A00BB1B88 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				0B7D18192F90E03A00BB1B88 /* EatometerWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BE67E812F9610FF0013B23D /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				0BE67E7D2F9610FF0013B23D /* EatometerWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0B0C743B2F8FDA29007D48F9 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		0B7D18042F90E03800BB1B88 /* EatometerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = EatometerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B7D18052F90E03800BB1B88 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		0B7D18072F90E03800BB1B88 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		0BA0B2A42F7138AC00FB87F3 /* Eatometer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Eatometer.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0BA0C0002F7138AC00FB87F4 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationService.swift; path = NotificationService/NotificationService.swift; sourceTree = SOURCE_ROOT; };
+		0BA0C0002F7138AC00FB87F5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = NotificationService/Info.plist; sourceTree = SOURCE_ROOT; };
+		0BA0C0002F7138AC00FB87F6 /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0BE67E732F9610FE0013B23D /* EatometerWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "EatometerWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0B1615872F729812006C7BE2 /* Exceptions for "Eatometer" folder in "Eatometer" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0BA0B2A32F7138AC00FB87F3 /* Eatometer */;
+		};
+		0B7D181E2F90E03A00BB1B88 /* Exceptions for "EatometerWidget" folder in "EatometerWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 0B7D18032F90E03800BB1B88 /* EatometerWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		0B7D18092F90E03800BB1B88 /* EatometerWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0B7D181E2F90E03A00BB1B88 /* Exceptions for "EatometerWidget" folder in "EatometerWidgetExtension" target */,
+			);
+			path = EatometerWidget;
+			sourceTree = "<group>";
+		};
+		0BA0B2A62F7138AC00FB87F3 /* Eatometer */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0B1615872F729812006C7BE2 /* Exceptions for "Eatometer" folder in "Eatometer" target */,
+			);
+			path = Eatometer;
+			sourceTree = "<group>";
+		};
+		0BE67E742F9610FE0013B23D /* EatometerWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "EatometerWatch Watch App";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0B7D18012F90E03800BB1B88 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B7D18082F90E03800BB1B88 /* SwiftUI.framework in Frameworks */,
+				0B7D18062F90E03800BB1B88 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BA0B2A12F7138AC00FB87F3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0B1615F02F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2TransportServices in Frameworks */,
+				0B0C743C2F8FDA29007D48F9 /* StoreKit.framework in Frameworks */,
+				0B1615EC2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2 in Frameworks */,
+				0B1615EE2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2Posix in Frameworks */,
+				AA1000022F7138AC00FB87F3 /* GRPCCore in Frameworks */,
+				AA1000032F7138AC00FB87F3 /* GRPCProtobuf in Frameworks */,
+				AA1000012F7138AC00FB87F3 /* SwiftProtobuf in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BE67E702F9610FE0013B23D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0B0C743A2F8FDA29007D48F9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0B0C743B2F8FDA29007D48F9 /* StoreKit.framework */,
+				0B7D18052F90E03800BB1B88 /* WidgetKit.framework */,
+				0B7D18072F90E03800BB1B88 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		0BA0B29B2F7138AC00FB87F3 = {
+			isa = PBXGroup;
+			children = (
+				0BA0B2A62F7138AC00FB87F3 /* Eatometer */,
+				0BA0C0002F7138AC00FB87F7 /* NotificationService */,
+				0B7D18092F90E03800BB1B88 /* EatometerWidget */,
+				0BE67E742F9610FE0013B23D /* EatometerWatch Watch App */,
+				0B0C743A2F8FDA29007D48F9 /* Frameworks */,
+				0BA0B2A52F7138AC00FB87F3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0BA0B2A52F7138AC00FB87F3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0BA0B2A42F7138AC00FB87F3 /* Eatometer.app */,
+				0BA0C0002F7138AC00FB87F6 /* NotificationService.appex */,
+				0B7D18042F90E03800BB1B88 /* EatometerWidgetExtension.appex */,
+				0BE67E732F9610FE0013B23D /* EatometerWatch Watch App.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0BA0C0002F7138AC00FB87F7 /* NotificationService */ = {
+			isa = PBXGroup;
+			children = (
+				0BA0C0002F7138AC00FB87F4 /* NotificationService.swift */,
+				0BA0C0002F7138AC00FB87F5 /* Info.plist */,
+			);
+			path = NotificationService;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0B7D18032F90E03800BB1B88 /* EatometerWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B7D181D2F90E03A00BB1B88 /* Build configuration list for PBXNativeTarget "EatometerWidgetExtension" */;
+			buildPhases = (
+				0B7D18002F90E03800BB1B88 /* Sources */,
+				0B7D18012F90E03800BB1B88 /* Frameworks */,
+				0B7D18022F90E03800BB1B88 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0B7D18092F90E03800BB1B88 /* EatometerWidget */,
+			);
+			name = EatometerWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = EatometerWidgetExtension;
+			productReference = 0B7D18042F90E03800BB1B88 /* EatometerWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		0BA0B2A32F7138AC00FB87F3 /* Eatometer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0BA0B2B12F7138AD00FB87F3 /* Build configuration list for PBXNativeTarget "Eatometer" */;
+			buildPhases = (
+				0BA0B2A02F7138AC00FB87F3 /* Sources */,
+				0BA0B2A12F7138AC00FB87F3 /* Frameworks */,
+				0BA0B2A22F7138AC00FB87F3 /* Resources */,
+				0B7D181A2F90E03A00BB1B88 /* Embed Foundation Extensions */,
+				0BE67E812F9610FF0013B23D /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0B7D18182F90E03A00BB1B88 /* PBXTargetDependency */,
+				0BE67E7C2F9610FF0013B23D /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0BA0B2A62F7138AC00FB87F3 /* Eatometer */,
+			);
+			name = Eatometer;
+			packageProductDependencies = (
+				AA1000212F7138AC00FB87F3 /* GRPCCore */,
+				AA1000222F7138AC00FB87F3 /* GRPCProtobuf */,
+				AA1000202F7138AC00FB87F3 /* SwiftProtobuf */,
+				0B1615EB2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2 */,
+				0B1615ED2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2Posix */,
+				0B1615EF2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2TransportServices */,
+			);
+			productName = Eatometer;
+			productReference = 0BA0B2A42F7138AC00FB87F3 /* Eatometer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		0BA0C0002F7138AC00FB87FB /* NotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0BA0C0002F7138AC00FB87FF /* Build configuration list for PBXNativeTarget "NotificationService" */;
+			buildPhases = (
+				0BA0C0002F7138AC00FB880 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0BA0C0002F7138AC00FB87F7 /* NotificationService */,
+			);
+			name = NotificationService;
+			packageProductDependencies = (
+			);
+			productName = NotificationService;
+			productReference = 0BA0C0002F7138AC00FB87F6 /* NotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		0BE67E722F9610FE0013B23D /* EatometerWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0BE67E7E2F9610FF0013B23D /* Build configuration list for PBXNativeTarget "EatometerWatch Watch App" */;
+			buildPhases = (
+				0BE67E6F2F9610FE0013B23D /* Sources */,
+				0BE67E702F9610FE0013B23D /* Frameworks */,
+				0BE67E712F9610FE0013B23D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				0BE67E742F9610FE0013B23D /* EatometerWatch Watch App */,
+			);
+			name = "EatometerWatch Watch App";
+			packageProductDependencies = (
+			);
+			productName = "EatometerWatch Watch App";
+			productReference = 0BE67E732F9610FE0013B23D /* EatometerWatch Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0BA0B29C2F7138AC00FB87F3 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					0B7D18032F90E03800BB1B88 = {
+						CreatedOnToolsVersion = 26.4;
+					};
+					0BA0B2A32F7138AC00FB87F3 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					0BE67E722F9610FE0013B23D = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+				};
+			};
+			buildConfigurationList = 0BA0B29F2F7138AC00FB87F3 /* Build configuration list for PBXProject "Eatometer" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				ru,
+			);
+			mainGroup = 0BA0B29B2F7138AC00FB87F3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AA1000102F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "swift-protobuf" */,
+				AA1000112F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "grpc-swift-2" */,
+				AA1000122F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "grpc-swift-protobuf" */,
+				0B1615EA2F72A2EA006C7BE2 /* XCRemoteSwiftPackageReference "grpc-swift-nio-transport" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0BA0B2A52F7138AC00FB87F3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0BA0B2A32F7138AC00FB87F3 /* Eatometer */,
+				0BA0C0002F7138AC00FB87FB /* NotificationService */,
+				0B7D18032F90E03800BB1B88 /* EatometerWidgetExtension */,
+				0BE67E722F9610FE0013B23D /* EatometerWatch Watch App */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0B7D18022F90E03800BB1B88 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BA0B2A22F7138AC00FB87F3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BE67E712F9610FE0013B23D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0B7D18002F90E03800BB1B88 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BA0B2A02F7138AC00FB87F3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BA0C0002F7138AC00FB880 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0BA0C0002F7138AC00FB882 /* NotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0BE67E6F2F9610FE0013B23D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0B7D18182F90E03A00BB1B88 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0B7D18032F90E03800BB1B88 /* EatometerWidgetExtension */;
+			targetProxy = 0B7D18172F90E03A00BB1B88 /* PBXContainerItemProxy */;
+		};
+		0BE67E7C2F9610FF0013B23D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0BE67E722F9610FE0013B23D /* EatometerWatch Watch App */;
+			targetProxy = 0BE67E7B2F9610FF0013B23D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0B7D181B2F90E03A00BB1B88 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = MainLemon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = EatometerWidget/EatometerWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EatometerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
+				INFOPLIST_KEY_CFBundleName = Eatometer;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		0B7D181C2F90E03A00BB1B88 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = MainLemon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = EatometerWidget/EatometerWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = EatometerWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
+				INFOPLIST_KEY_CFBundleName = Eatometer;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer.Widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		0BA0B2AF2F7138AD00FB87F3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		0BA0B2B02F7138AD00FB87F3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0BA0B2B22F7138AD00FB87F3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ADMIN_API_URL = "http://127.0.0.1:46050";
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "Orange Lemon Watermelon";
+				ASSETCATALOG_COMPILER_APPICON_NAME = Egg;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				AUTH_API_URL = "http://127.0.0.1:44044";
+				AUTH_SERVER_BASE_URL = "http://127.0.0.1:8080";
+				CODE_SIGN_ENTITLEMENTS = Eatometer/Eatometer.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				FOOD_API_URL = "http://127.0.0.1:46045";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Eatometer/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SEARCH_API_URL = "http://127.0.0.1:49049";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_API_URL = "http://127.0.0.1:45045";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		0BA0B2B32F7138AD00FB87F3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ADMIN_API_URL = "https://admin.golapta.com";
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "Orange Lemon Watermelon";
+				ASSETCATALOG_COMPILER_APPICON_NAME = Egg;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				AUTH_API_URL = "https://auth.golapta.com";
+				AUTH_SERVER_BASE_URL = "https://sso.golapta.com";
+				CODE_SIGN_ENTITLEMENTS = Eatometer/Eatometer.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_PREVIEWS = YES;
+				FOOD_API_URL = "https://food.golapta.com";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Eatometer/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SEARCH_API_URL = "https://search.goeatometer.com";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				USER_API_URL = "https://users.golapta.com";
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+		0BA0C0002F7138AC00FB890 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer.NotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0BA0C0002F7138AC00FB891 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer.NotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		0BE67E7F2F9610FF0013B23D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = MainLemon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.goeatometer.Eatometer;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		0BE67E802F9610FF0013B23D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = MainLemon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XVGJW3U9VA;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.goeatometer.Eatometer;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.3;
+				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0B7D181D2F90E03A00BB1B88 /* Build configuration list for PBXNativeTarget "EatometerWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0B7D181B2F90E03A00BB1B88 /* Debug */,
+				0B7D181C2F90E03A00BB1B88 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0BA0B29F2F7138AC00FB87F3 /* Build configuration list for PBXProject "Eatometer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BA0B2AF2F7138AD00FB87F3 /* Debug */,
+				0BA0B2B02F7138AD00FB87F3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0BA0B2B12F7138AD00FB87F3 /* Build configuration list for PBXNativeTarget "Eatometer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BA0B2B22F7138AD00FB87F3 /* Debug */,
+				0BA0B2B32F7138AD00FB87F3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0BA0C0002F7138AC00FB87FF /* Build configuration list for PBXNativeTarget "NotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BA0C0002F7138AC00FB890 /* Debug */,
+				0BA0C0002F7138AC00FB891 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0BE67E7E2F9610FF0013B23D /* Build configuration list for PBXNativeTarget "EatometerWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0BE67E7F2F9610FF0013B23D /* Debug */,
+				0BE67E802F9610FF0013B23D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		0B1615EA2F72A2EA006C7BE2 /* XCRemoteSwiftPackageReference "grpc-swift-nio-transport" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/grpc/grpc-swift-nio-transport";
+			requirement = {
+				kind = exactVersion;
+				version = 2.5.0;
+			};
+		};
+		AA1000102F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "swift-protobuf" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-protobuf.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.36.1;
+			};
+		};
+		AA1000112F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "grpc-swift-2" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/grpc/grpc-swift-2.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.3.0;
+			};
+		};
+		AA1000122F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "grpc-swift-protobuf" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/grpc/grpc-swift-protobuf.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.2.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0B1615EB2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0B1615EA2F72A2EA006C7BE2 /* XCRemoteSwiftPackageReference "grpc-swift-nio-transport" */;
+			productName = GRPCNIOTransportHTTP2;
+		};
+		0B1615ED2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2Posix */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0B1615EA2F72A2EA006C7BE2 /* XCRemoteSwiftPackageReference "grpc-swift-nio-transport" */;
+			productName = GRPCNIOTransportHTTP2Posix;
+		};
+		0B1615EF2F72A2EA006C7BE2 /* GRPCNIOTransportHTTP2TransportServices */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0B1615EA2F72A2EA006C7BE2 /* XCRemoteSwiftPackageReference "grpc-swift-nio-transport" */;
+			productName = GRPCNIOTransportHTTP2TransportServices;
+		};
+		AA1000202F7138AC00FB87F3 /* SwiftProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1000102F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "swift-protobuf" */;
+			productName = SwiftProtobuf;
+		};
+		AA1000212F7138AC00FB87F3 /* GRPCCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1000112F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "grpc-swift-2" */;
+			productName = GRPCCore;
+		};
+		AA1000222F7138AC00FB87F3 /* GRPCProtobuf */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA1000122F7138AC00FB87F3 /* XCRemoteSwiftPackageReference "grpc-swift-protobuf" */;
+			productName = GRPCProtobuf;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0BA0B29C2F7138AC00FB87F3 /* Project object */;
+}

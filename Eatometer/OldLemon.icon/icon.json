@@ -1,0 +1,47 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.99414,0.96582,0.32031,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "Leaf2.png",
+          "name" : "Leaf2",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -67.69296426448966
+            ]
+          }
+        },
+        {
+          "image-name" : "IconOriginal.png",
+          "name" : "IconOriginal",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -67.69296426448966
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "identifier" : "EatometerSupporters",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21000001",
+      "localizations" : [
+        {
+          "description" : "Поддержите развитие Eatometer",
+          "displayName" : "Eatometer Supporters",
+          "locale" : "ru_RU"
+        },
+        {
+          "description" : "Support Eatometer development",
+          "displayName" : "Eatometer Supporters",
+          "locale" : "en_US"
+        }
+      ],
+      "name" : "Eatometer Supporters",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "0.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "21100001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Спасибо за поддержку! Маленький значок благодарности появится в вашем профиле.",
+              "displayName" : "Сторонник",
+              "locale" : "ru_RU"
+            },
+            {
+              "description" : "Thank you! A small badge of gratitude will appear in your profile.",
+              "displayName" : "Supporter",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.goeatometer.Eatometer.supporter.tier1",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Supporter Tier 1",
+          "subscriptionGroupID" : "21000001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : []
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "21100002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Большое спасибо! Особый значок благодарности появится в профиле.",
+              "displayName" : "Друг проекта",
+              "locale" : "ru_RU"
+            },
+            {
+              "description" : "Big thanks! A special badge will appear in your profile.",
+              "displayName" : "Friend",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.goeatometer.Eatometer.supporter.tier2",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Supporter Tier 2",
+          "subscriptionGroupID" : "21000001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : []
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "21100003",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Огромное спасибо! Эксклюзивный значок благодарности в профиле.",
+              "displayName" : "Покровитель",
+              "locale" : "ru_RU"
+            },
+            {
+              "description" : "Huge thanks! An exclusive badge in your profile.",
+              "displayName" : "Patron",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.goeatometer.Eatometer.supporter.tier3",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Supporter Tier 3",
+          "subscriptionGroupID" : "21000001",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : []
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

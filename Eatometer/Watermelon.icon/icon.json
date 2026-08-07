@@ -1,0 +1,40 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.92236,0.33008,0.15698,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "Korka 3.png",
+          "name" : "Korka 3",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              394.00000000000006
+            ]
+          }
+        },
+        {
+          "image-name" : "semki.png",
+          "name" : "semki"
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

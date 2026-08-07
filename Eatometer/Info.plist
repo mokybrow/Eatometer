@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>ADMIN_API_URL</key>
+	<string>$(ADMIN_API_URL)</string>
+	<key>AUTH_API_URL</key>
+	<string>$(AUTH_API_URL)</string>
+	<key>AUTH_CALLBACK_SCHEME</key>
+	<string>eatometer</string>
+	<key>AUTH_SERVER_BASE_URL</key>
+	<string>$(AUTH_SERVER_BASE_URL)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Eatometer</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Eatometer</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.goeatometer.Eatometer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>eatometer</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>FOOD_API_URL</key>
+	<string>$(FOOD_API_URL)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Едометр использует камеру для сканирования штрихкодов продуктов, чтобы быстро добавлять их в приём пищи.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Едометр читает пол, рост, вес и возраст из «Здоровья», чтобы рассчитать ваш план питания.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Едометр записывает калории, белки, жиры, углеводы и воду в «Здоровье», чтобы все данные были в одном месте.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Едометр подключается к локальным сервисам разработки.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Едометр использует медиатеку, чтобы вы могли загрузить фотографию этикетки продукта при отправке на верификацию.</string>
+	<key>SEARCH_API_URL</key>
+	<string>$(SEARCH_API_URL)</string>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+	</array>
+	<key>USER_API_URL</key>
+	<string>$(USER_API_URL)</string>
+</dict>
+</plist>
