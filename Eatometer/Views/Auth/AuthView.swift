@@ -4,6 +4,7 @@ import SwiftUI
 struct AuthView: View {
     @EnvironmentObject private var authService: FoodAuthService
     @Environment(\.colorScheme) private var colorScheme
+    @State private var appleNonce = ""
 
     private var appDisplayName: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
@@ -67,6 +68,12 @@ struct AuthView: View {
 
             SignInWithAppleButton(.continue) { request in
                 request.requestedScopes = [.fullName, .email]
+                guard let nonce = FoodAuthService.makeAppleNonce() else {
+                    authService.authenticationError = NSLocalizedString("auth.apple.nonce_error", comment: "Could not create Apple nonce")
+                    return
+                }
+                appleNonce = nonce
+                request.nonce = FoodAuthService.appleNonceHash(nonce)
             } onCompletion: { result in
                 switch result {
                 case .success(let authorization):
@@ -77,7 +84,7 @@ struct AuthView: View {
                         )
                         return
                     }
-                    authService.loginWithAppleNative(credential: credential)
+                    authService.loginWithAppleNative(credential: credential, nonce: appleNonce)
                 case .failure(let error):
                     if (error as? ASAuthorizationError)?.code != .canceled {
                         authService.authenticationError = error.localizedDescription

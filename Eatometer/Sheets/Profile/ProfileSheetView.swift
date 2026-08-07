@@ -35,8 +35,6 @@ private enum ProfileDestination: Hashable {
     case name
     case username
     case email
-    case password
-    case setPassword
     case supporter
     case nutrition(NutritionPreferencesDestination)
 }
@@ -175,13 +173,6 @@ struct ProfileSheetView: View {
 
     private var legalInformationTitle: String {
         LegalContent.legalInformationTitle
-    }
-
-    private var passwordDestination: ProfileDestination {
-        if let passwordSet = userService.currentUser?.passwordSet, passwordSet == false {
-            return .setPassword
-        }
-        return .password
     }
 
     private var dismissToolbarButton: some View {
@@ -376,10 +367,6 @@ struct ProfileSheetView: View {
             ChangeUsernameSheet(showsCloseButton: false)
         case .email:
             emailDestinationView
-        case .password:
-            ChangePasswordSheet(showsCloseButton: false)
-        case .setPassword:
-            SetPasswordSheet(showsCloseButton: false)
         case .supporter:
             SupporterSheetView()
         case let .nutrition(destination):
@@ -873,44 +860,6 @@ struct ProfileSheetView: View {
             }
         }
         .navigationTitle("Учётная запись")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var legacyCredentialsSettingsView: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 24) {
-                VStack(spacing: 0) {
-                    NavigationLink(value: ProfileDestination.username) {
-                        profileRow(
-                            title: NSLocalizedString("profile.username.section", tableName: nil, bundle: .main, value: "Username", comment: "Username row label"),
-                            value: displayUsername
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    Divider().padding(.leading, 16)
-
-                    emailCredentialRow
- 
-                    Divider().padding(.leading, 16)
-
-                    NavigationLink(value: passwordDestination) {
-                        profileRow(
-                            title: NSLocalizedString("profile.password.title", comment: "Password title")
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-                .background(cardBackground)
-                .clipShape(RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
-                .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 2)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 28)
-        }
-        .background(pageBackground.ignoresSafeArea())
-        .navigationTitle(Text(NSLocalizedString("profile.privacy.credentials", tableName: nil, bundle: .main, value: "Credentials", comment: "Credentials title")))
         .navigationBarTitleDisplayMode(.inline)
     }
 

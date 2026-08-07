@@ -24,9 +24,6 @@ struct ChangeEmailSheet: View {
         self.onSent = onSent
     }
 
-    private var currentUserEmail: String? { userService.currentUser?.email }
-    private var currentUserEmailConfirmed: Bool { userService.currentUser?.emailConfirmed ?? false }
-
     var body: some View {
         Group {
             if showsCloseButton {
@@ -46,11 +43,6 @@ struct ChangeEmailSheet: View {
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
                     .disableAutocorrection(true)
-                    .onAppear {
-                        if !currentUserEmailConfirmed {
-                            email = currentUserEmail ?? ""
-                        }
-                    }
             }
 
             if let errorMessage {
@@ -129,15 +121,11 @@ struct ChangeEmailSheet: View {
     }
 
     private var initialButtonTitle: String {
-        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !currentUserEmailConfirmed {
-            return NSLocalizedString(trimmed == (currentUserEmail ?? "") ? "profile.email.send_confirmation" : "profile.email.change.action", comment: "Change email primary action")
-        }
         return NSLocalizedString("profile.email.change.action", comment: "Change email action")
     }
 
     private var primaryActionDisabled: Bool {
-        isLoading || (requiresValidation && !isValidEmail(email))
+        isLoading || !isValidEmail(email)
     }
 
     private var primaryActionButton: some View {
@@ -170,12 +158,6 @@ struct ChangeEmailSheet: View {
         .accessibilityLabel(Text(initialButtonTitle))
     }
 
-    private var requiresValidation: Bool {
-        let trimmed = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        if currentUserEmailConfirmed { return true }
-        return trimmed != (currentUserEmail ?? "")
-    }
-
     private var combinedCode: String { codeDigits.joined() }
 
     private var resendDisabled: Bool {
@@ -191,19 +173,7 @@ struct ChangeEmailSheet: View {
     private func sendConfirmation() async {
         errorMessage = nil
         isLoading = true
-        let ok: Bool
-        if currentUserEmailConfirmed {
-            ok = await authService.initiateChangeEmail(newEmail: email)
-        } else {
-            guard let currentUserEmail else {
-                await MainActor.run {
-                    errorMessage = NSLocalizedString("profile.email.no_account_email", comment: "No account email error")
-                    isLoading = false
-                }
-                return
-            }
-            ok = await authService.sendEmailConfirmation(email: currentUserEmail)
-        }
+        let ok = await authService.initiateChangeEmail(newEmail: email)
 
         await MainActor.run {
             isLoading = false
@@ -222,7 +192,7 @@ struct ChangeEmailSheet: View {
         confirmError = nil
         confirmLoading = true
         let code = combinedCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        let ok = await authService.confirmEmail(code: code)
+        let ok = await authService.confirmChangeEmail(code: code)
         await MainActor.run {
             confirmLoading = false
         }

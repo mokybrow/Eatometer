@@ -1,9 +1,11 @@
 import AuthenticationServices
 import Combine
+import CryptoKit
 import Foundation
 import GRPCCore
 import GRPCNIOTransportHTTP2
 import GRPCProtobuf
+import Security
 
 @MainActor
 final class FoodAuthService: ObservableObject {
@@ -16,19 +18,11 @@ final class FoodAuthService: ObservableObject {
     private static let displayNameKey = "Eatometer.auth.display_name"
     private static let refreshSkew: TimeInterval = 300
 
-    struct PendingSocialSignup: Identifiable, Hashable {
-        let id: String
-        let provider: String
-        let firstName: String
-        let lastName: String
-    }
-
     @Published private(set) var isAuthenticated = false
     @Published private(set) var currentUsername = ""
     @Published private(set) var recentAccounts: [String] = []
     @Published private(set) var isSigningIn = false
     @Published var authenticationError: String?
-    @Published var pendingSocialSignup: PendingSocialSignup?
     @Published var showProfile = false
 
     private let serverHost: String
@@ -54,16 +48,26 @@ final class FoodAuthService: ObservableObject {
         isAuthenticated = accessToken != nil || refreshToken != nil
     }
 
-    func loginWithAppleNative(credential: ASAuthorizationAppleIDCredential) {
+    static func makeAppleNonce(length: Int = 32) -> String? {
+        let alphabet = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var bytes = [UInt8](repeating: 0, count: length)
+        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { return nil }
+        return String(bytes.map { alphabet[Int($0) % alphabet.count] })
+    }
+
+    static func appleNonceHash(_ nonce: String) -> String {
+        SHA256.hash(data: Data(nonce.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    func loginWithAppleNative(credential: ASAuthorizationAppleIDCredential, nonce: String) {
         guard let tokenData = credential.identityToken,
               let identityToken = String(data: tokenData, encoding: .utf8),
-              !identityToken.isEmpty else {
+              !identityToken.isEmpty,
+              !nonce.isEmpty else {
             authenticationError = String(localized: "Не удалось получить токен Apple ID")
             return
         }
 
-        let authorizationCode = credential.authorizationCode
-            .flatMap { String(data: $0, encoding: .utf8) } ?? ""
         let name = PersonNameComponentsFormatter.localizedString(
             from: credential.fullName ?? PersonNameComponents(),
             style: .default,
@@ -78,10 +82,10 @@ final class FoodAuthService: ObservableObject {
                 let tokens = try await withAuthClient { client in
                     var request = Auth_SignInWithAppleRequest()
                     request.identityToken = identityToken
-                    request.authorizationCode = authorizationCode
                     request.name = name
                     request.appID = Self.appID
                     request.requestedScopes = Self.requestedScopes
+                    request.nonce = nonce
                     return try await client.signInWithApple(request, metadata: self.publicMetadata())
                 }
                 save(tokens: tokens, displayName: name)
@@ -193,22 +197,6 @@ final class FoodAuthService: ObservableObject {
         }
     }
 
-    func sendEmailConfirmation(email: String) async -> Bool {
-        await authenticatedBool { client, metadata in
-            var request = Auth_SendEmailConfirmationRequest()
-            request.email = email.trimmingCharacters(in: .whitespacesAndNewlines)
-            return try await client.sendEmailConfirmation(request, metadata: metadata).success
-        }
-    }
-
-    func confirmEmail(code: String) async -> Bool {
-        await authenticatedBool { client, metadata in
-            var request = Auth_ConfirmEmailRequest()
-            request.code = code.trimmingCharacters(in: .whitespacesAndNewlines)
-            return try await client.confirmEmail(request, metadata: metadata).success
-        }
-    }
-
     func initiateChangeEmail(newEmail: String) async -> Bool {
         await authenticatedBool { client, metadata in
             var request = Auth_InitiateChangeEmailRequest()
@@ -299,7 +287,6 @@ final class FoodAuthService: ObservableObject {
         isAuthenticated = false
         isSigningIn = false
         showProfile = false
-        pendingSocialSignup = nil
     }
 
     private func migrateLegacyTokens() {
@@ -339,37 +326,15 @@ final class FoodAuthService: ObservableObject {
         return String(localized: "Не удалось войти. Проверьте соединение и попробуйте ещё раз.")
     }
 
-    // Compatibility for obsolete screens kept in source history. The public flow is Apple-only.
     func updateCurrentUsername(_ value: String) {
         currentUsername = value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-    func refreshSharedAccounts() {}
-    func login(username: String, password: String) async throws -> Auth_TokenPair { throw FoodAuthError.appleOnly }
-    func register(email: String, username: String, password: String) async throws -> Auth_TokenPair { throw FoodAuthError.appleOnly }
-    func forgotPassword(email: String) async throws -> Bool { throw FoodAuthError.appleOnly }
-    func resetPassword(email: String, code: String, newPassword: String) async -> Bool { false }
-    func completePendingSocialSignup(username: String) async throws { throw FoodAuthError.appleOnly }
-    func setPassword(newPassword: String) async -> Bool { false }
-    func changePassword(old: String, new: String) async -> Bool { false }
-    func startOAuth(provider: String) {}
-    func startOAuthLink(provider: String, userService: UserService? = nil) {}
-    func linkWithAppleNative(credential: ASAuthorizationAppleIDCredential, userService: UserService? = nil) {}
-    func unlinkSocialAccount(providerID: String) async -> Bool { false }
 }
 
 enum FoodAuthError: LocalizedError {
-    case emptyUsername, emptyPassword, emptyEmail, invalidPassword, noPendingSignup
-    case unauthenticated, appleOnly
+    case unauthenticated
 
     var errorDescription: String? {
-        switch self {
-        case .unauthenticated: "Требуется вход"
-        case .appleOnly: "Вход доступен только через Apple ID"
-        case .emptyUsername: "Введите имя пользователя"
-        case .emptyPassword: "Введите пароль"
-        case .emptyEmail: "Введите почту"
-        case .invalidPassword: "Некорректный пароль"
-        case .noPendingSignup: "Нет незавершённого входа"
-        }
+        "Требуется вход"
     }
 }

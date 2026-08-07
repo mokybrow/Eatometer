@@ -60,7 +60,6 @@ extension User_User {
     var username: String { name }
     var firstName: String { name }
     var lastName: String { "" }
-    var passwordSet: Bool { false }
 }
 
 struct EatometerFriendship: Identifiable, Hashable {

@@ -33,8 +33,6 @@ struct ContentView: View {
     @State private var selectedTab: TabSelection = .today
     @State private var librarySection: EatometerLibrarySection = .products
     @State private var sidebarColumnVisibility: NavigationSplitViewVisibility = .automatic
-    @State private var showEmailConfirmationResult = false
-    @State private var emailConfirmationResultMessage: String? = nil
     @State private var hasExceededStartupPlaceholderDeadline = false
     @State private var todayPath = NavigationPath()
     @State private var libraryPath = NavigationPath()
@@ -232,9 +230,6 @@ struct ContentView: View {
                 await handlePushDeepLink(url)
                 pushNotificationService.consumePendingDeepLinkURL(url)
             }
-        }
-        .alert(emailConfirmationResultMessage ?? "", isPresented: $showEmailConfirmationResult) {
-            Button("common.ok", role: .cancel) {}
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             guard isAuthenticated else { return }
@@ -740,17 +735,6 @@ struct ContentView: View {
         if ["calorie-plan-review", "calorie_plan_review"].contains(route) {
             authService.showProfile = false
             diaryService.shouldShowCaloriePlanReview = true
-            return
-        }
-
-        if ["confirm-email", "confirm_email", "confirmemail"].contains(route),
-           let code = components.queryItems?.first(where: { $0.name == "token" })?.value,
-           !code.isEmpty {
-            Task { @MainActor in
-                let success = await authService.confirmEmail(code: code)
-                emailConfirmationResultMessage = success ? "Email confirmed successfully." : "Failed to confirm email. Please try again in the app."
-                showEmailConfirmationResult = true
-            }
             return
         }
 
