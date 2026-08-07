@@ -2665,7 +2665,7 @@ final class FoodCatalogService: ObservableObject {
     ]
 
     private static let sampleProducts: [ProductSummary] = [
-        ProductSummary(id: UUID(), name: "Греческий йогурт", brand: "Lapta Local", caloriesPer100g: 68, proteinPer100g: 5, fatPer100g: 3, carbsPer100g: 4),
+        ProductSummary(id: UUID(), name: "Греческий йогурт", brand: "Eatometer Local", caloriesPer100g: 68, proteinPer100g: 5, fatPer100g: 3, carbsPer100g: 4),
         ProductSummary(id: UUID(), name: "Овсяные хлопья", brand: "Nordic", caloriesPer100g: 352, proteinPer100g: 12, fatPer100g: 6, carbsPer100g: 61),
         ProductSummary(id: UUID(), name: "Филе индейки", brand: "Farm", caloriesPer100g: 144, proteinPer100g: 29, fatPer100g: 2, carbsPer100g: 0),
         ProductSummary(id: UUID(), name: "Творог 5%", brand: "Village", caloriesPer100g: 121, proteinPer100g: 17, fatPer100g: 5, carbsPer100g: 3)

@@ -9,8 +9,8 @@ import WidgetKit
 @MainActor
 final class FoodDiaryService: ObservableObject {
     private static let legacyManualNutritionItemName = "Ручной ввод КБЖУ"
-    private static let manualNutritionNotePrefix = "lapta.manualNutrition|"
-    private static let mealCategoryNotePrefix = "lapta.mealCategory|"
+    private static let manualNutritionNotePrefix = "eatometer.manualNutrition|"
+    private static let mealCategoryNotePrefix = "eatometer.mealCategory|"
 
     @Published private(set) var meals: [MealEntry]
     @Published private(set) var isLoading = false

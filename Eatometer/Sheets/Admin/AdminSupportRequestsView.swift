@@ -236,7 +236,6 @@ private struct AdminSupportAppFilter: Identifiable {
 
     static let options = [
         AdminSupportAppFilter(id: "", title: "All apps"),
-        AdminSupportAppFilter(id: "lapta-app", title: "Lapta"),
         AdminSupportAppFilter(id: "eatometer-app", title: "Eatometer"),
         AdminSupportAppFilter(id: "theatrum-app", title: "Theatrum")
     ]
@@ -268,9 +267,7 @@ private struct AdminSupportReplyStatus: Identifiable {
 
 private func adminSupportAppTitle(_ appID: String) -> String {
     switch appID.trimmingCharacters(in: .whitespacesAndNewlines) {
-    case "lapta-app", "lapta-platform":
-        return "Lapta"
-    case "eatometer-app", "lapta-food":
+    case "eatometer-app":
         return "Eatometer"
     case "theatrum-app", "movies-app":
         return "Theatrum"

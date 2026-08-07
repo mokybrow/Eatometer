@@ -660,13 +660,13 @@
 		0BA0B2B32F7138AD00FB87F3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ADMIN_API_URL = "https://admin.golapta.com";
+				ADMIN_API_URL = "https://admin.goeatometer.com";
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "Orange Lemon Watermelon";
 				ASSETCATALOG_COMPILER_APPICON_NAME = Egg;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				AUTH_API_URL = "https://auth.golapta.com";
-				AUTH_SERVER_BASE_URL = "https://sso.golapta.com";
+				AUTH_API_URL = "https://auth.goeatometer.com";
+				AUTH_SERVER_BASE_URL = "https://sso.goeatometer.com";
 				CODE_SIGN_ENTITLEMENTS = Eatometer/Eatometer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -675,7 +675,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
-				FOOD_API_URL = "https://food.golapta.com";
+				FOOD_API_URL = "https://food.goeatometer.com";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Eatometer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
@@ -701,7 +701,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				USER_API_URL = "https://users.golapta.com";
+				USER_API_URL = "https://users.goeatometer.com";
 				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;

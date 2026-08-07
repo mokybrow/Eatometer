@@ -63,7 +63,7 @@ extension Search_SearchGamesService {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > SearchGamesService provides game search for the Lapta app.
+    /// > SearchGamesService provides game search for client applications.
     public protocol StreamingServiceProtocol: GRPCCore.RegistrableRPCService {
         /// Handle the "SearchGames" method.
         ///
@@ -90,7 +90,7 @@ extension Search_SearchGamesService {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > SearchGamesService provides game search for the Lapta app.
+    /// > SearchGamesService provides game search for client applications.
     public protocol ServiceProtocol: Search_SearchGamesService.StreamingServiceProtocol {
         /// Handle the "SearchGames" method.
         ///
@@ -115,7 +115,7 @@ extension Search_SearchGamesService {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > SearchGamesService provides game search for the Lapta app.
+    /// > SearchGamesService provides game search for client applications.
     public protocol SimpleServiceProtocol: Search_SearchGamesService.ServiceProtocol {
         /// Handle the "SearchGames" method.
         ///
@@ -194,7 +194,7 @@ extension Search_SearchGamesService {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > SearchGamesService provides game search for the Lapta app.
+    /// > SearchGamesService provides game search for client applications.
     public protocol ClientProtocol: Sendable {
         /// Call the "SearchGames" method.
         ///
@@ -224,7 +224,7 @@ extension Search_SearchGamesService {
     ///
     /// > Source IDL Documentation:
     /// >
-    /// > SearchGamesService provides game search for the Lapta app.
+    /// > SearchGamesService provides game search for client applications.
     public struct Client<Transport>: ClientProtocol where Transport: GRPCCore.ClientTransport {
         private let client: GRPCCore.GRPCClient<Transport>
 

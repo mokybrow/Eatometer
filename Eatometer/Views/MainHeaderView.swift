@@ -156,7 +156,7 @@ struct MainHeaderView: View {
         }
 
         let fallback = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        return fallback.isEmpty ? "Lapta" : fallback
+        return fallback.isEmpty ? "Eatometer" : fallback
     }
 }
 
