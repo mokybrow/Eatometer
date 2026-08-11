@@ -611,13 +611,16 @@
 		0BA0B2B22F7138AD00FB87F3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ADMIN_API_URL = "http://127.0.0.1:46050";
+				"ADMIN_API_URL[sdk=iphoneos*]" = "https://admin.goeatometer.com";
+				"ADMIN_API_URL[sdk=iphonesimulator*]" = "http://127.0.0.1:46050";
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "Orange Lemon Watermelon";
 				ASSETCATALOG_COMPILER_APPICON_NAME = Egg;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				AUTH_API_URL = "http://127.0.0.1:44044";
-				AUTH_SERVER_BASE_URL = "http://127.0.0.1:8080";
+				"AUTH_API_URL[sdk=iphoneos*]" = "https://auth.goeatometer.com";
+				"AUTH_API_URL[sdk=iphonesimulator*]" = "http://127.0.0.1:44044";
+				"AUTH_SERVER_BASE_URL[sdk=iphoneos*]" = "https://sso.goeatometer.com";
+				"AUTH_SERVER_BASE_URL[sdk=iphonesimulator*]" = "http://127.0.0.1:8080";
 				CODE_SIGN_ENTITLEMENTS = Eatometer/Eatometer.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -626,7 +629,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
-				FOOD_API_URL = "http://127.0.0.1:46045";
+				"FOOD_API_URL[sdk=iphoneos*]" = "https://food.goeatometer.com";
+				"FOOD_API_URL[sdk=iphonesimulator*]" = "http://127.0.0.1:46045";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Eatometer/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Eatometer;
@@ -640,7 +644,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.goeatometer.Eatometer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
-				SEARCH_API_URL = "http://127.0.0.1:49049";
+				"SEARCH_API_URL[sdk=iphoneos*]" = "https://search.goeatometer.com";
+				"SEARCH_API_URL[sdk=iphonesimulator*]" = "http://127.0.0.1:49049";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -652,7 +657,8 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				USER_API_URL = "http://127.0.0.1:45045";
+				"USER_API_URL[sdk=iphoneos*]" = "https://users.goeatometer.com";
+				"USER_API_URL[sdk=iphonesimulator*]" = "http://127.0.0.1:45045";
 				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
