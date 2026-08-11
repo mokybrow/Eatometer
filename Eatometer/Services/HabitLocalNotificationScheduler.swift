@@ -9,7 +9,6 @@ final class HabitLocalNotificationScheduler {
     private let manualNotificationPrefix = "habit-manual-check-"
     private let resetNotificationPrefix = "habit-auto-reset-"
     private let waterNotificationPrefix = "water-log-reminder-"
-    private let waterReminderHours = [9, 14, 19]
 
     private init() {}
 
@@ -50,51 +49,11 @@ final class HabitLocalNotificationScheduler {
     }
 
     func refreshWaterReminders(isWaterTrackingEnabled: Bool) {
+        // Water reminders are delivered by notification-service. Always clear
+        // legacy local requests so an upgraded device does not show duplicate
+        // local and remote notifications.
         cancelPendingRequests(withPrefix: waterNotificationPrefix)
-
-        guard isWaterTrackingEnabled,
-              HabitNotificationPreferences.shared.waterLoggingRemindersEnabled else { return }
-
-        Task {
-            await PushNotificationService.shared.requestLocalAuthorizationIfNeeded()
-
-            for hour in waterReminderHours {
-                var components = DateComponents()
-                components.calendar = Calendar.current
-                components.timeZone = TimeZone.current
-                components.hour = hour
-                components.minute = 0
-
-                let content = UNMutableNotificationContent()
-                content.title = NSLocalizedString(
-                    "water.reminder.title",
-                    tableName: nil,
-                    bundle: .main,
-                    value: "Log water",
-                    comment: "Water logging reminder title"
-                )
-                content.body = NSLocalizedString(
-                    "water.reminder.body",
-                    tableName: nil,
-                    bundle: .main,
-                    value: "Add what you drank so your water habit stays accurate.",
-                    comment: "Water logging reminder body"
-                )
-                content.sound = .default
-                content.userInfo = [
-                    "type": "water_log_reminder",
-                    "target_screen": "water",
-                    "deep_link": "eatometer://water"
-                ]
-
-                let request = UNNotificationRequest(
-                    identifier: waterNotificationIdentifier(hour: hour),
-                    content: content,
-                    trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-                )
-                try? await UNUserNotificationCenter.current().add(request)
-            }
-        }
+        _ = isWaterTrackingEnabled
     }
 
     func notifyAutomaticReset(for habit: Habit, failedDay: Date) {
@@ -220,10 +179,6 @@ final class HabitLocalNotificationScheduler {
 
     private func notificationIdentifier(for habitID: UUID) -> String {
         manualNotificationPrefix + habitID.uuidString
-    }
-
-    private func waterNotificationIdentifier(hour: Int) -> String {
-        waterNotificationPrefix + String(hour)
     }
 
     private func cancelPendingRequests(withPrefix prefix: String) {
