@@ -69,11 +69,10 @@ final class FoodDiaryService: ObservableObject {
     private static let sharedAppGroupID = "group.com.goeatometer.Eatometer.shared"
     private static let calorieOnboardingCompletedKeyPrefix = "Eatometer.diary.calorieOnboardingCompleted."
 
-    // TEMPORARY — visual QA of the onboarding flow.
-    // While `true` the "completed" flag is never stored or trusted, so the
-    // onboarding pages come back on every launch. Flip to `false` (or ship a
-    // release build) to restore the run-once behaviour.
-    static let isCalorieOnboardingPersistenceDisabled = true
+    // Kept as a single switch for UI tests. Production trusts the server-side
+    // Eatometer settings flag and uses the scoped local value only as an
+    // offline fallback, so onboarding remains completed across devices.
+    static let isCalorieOnboardingPersistenceDisabled = false
     private static let nutritionSettingsUpdatedAtKeyPrefix = "Eatometer.diary.nutritionUpdatedAt."
     private static let importedMealShareCodesKeyPrefix = "Eatometer.diary.importedMealShareCodes."
     private static let mealCacheKeyPrefix = "Eatometer.diary.mealCache."
@@ -1591,8 +1590,8 @@ final class FoodDiaryService: ObservableObject {
         persistCheatMealDays()
     }
 
-    /// Onboarding runs once. The local flag wins over the server so a stale or
-    /// not-yet-persisted `calorieOnboardingCompleted` can never bring it back.
+    /// Onboarding runs once. The server flag is the cross-device source of
+    /// truth; the scoped local flag keeps it hidden while an update is in flight.
     private func updateCalorieOnboardingVisibility(from settings: User_EatometerSettings) {
         let remoteCompleted = settings.hasNutritionSettings && settings.nutritionSettings.calorieOnboardingCompleted
         let locallyCompleted = FoodDiaryService.loadCalorieOnboardingCompleted(scopeUserID: scopeUserID) == true
