@@ -237,4 +237,46 @@ enum HabitPalette {
         "nosign", "minus.circle.fill", "checkmark.seal.fill", "star.fill",
         "book.fill", "brain.head.profile", "music.note", "headphones"
     ]
+
+    /// What an icon is called, for the menu and for VoiceOver.
+    ///
+    /// The list above is SF Symbol names, which are addresses rather than words:
+    /// a menu offering "takeoutbag.and.cup.and.straw.fill" tells the reader what
+    /// the drawing is filed under, not what it means. Named after what the icon
+    /// stands for in a habit — "Running", not "figure.run" — because that is
+    /// what is being chosen.
+    ///
+    /// An unknown symbol falls back to its own name, so a symbol added to the
+    /// list without a title still appears rather than going blank.
+    static func title(for symbol: String) -> String {
+        guard let key = titleKeys[symbol] else { return symbol }
+        return NSLocalizedString(key, comment: "Habit icon name")
+    }
+
+    private static let titleKeys: [String: String] = [
+        "leaf.fill": "habits.icon.leaf",
+        "drop.fill": "habits.icon.drop",
+        "flame.fill": "habits.icon.flame",
+        "bolt.fill": "habits.icon.bolt",
+        "heart.fill": "habits.icon.heart",
+        "figure.walk": "habits.icon.walk",
+        "figure.run": "habits.icon.run",
+        "dumbbell.fill": "habits.icon.workout",
+        "fork.knife": "habits.icon.meal",
+        "cup.and.saucer.fill": "habits.icon.drink",
+        "carrot.fill": "habits.icon.vegetables",
+        "takeoutbag.and.cup.and.straw.fill": "habits.icon.takeaway",
+        "moon.zzz.fill": "habits.icon.sleep",
+        "bed.double.fill": "habits.icon.bed",
+        "alarm.fill": "habits.icon.alarm",
+        "sun.max.fill": "habits.icon.morning",
+        "nosign": "habits.icon.avoid",
+        "minus.circle.fill": "habits.icon.less",
+        "checkmark.seal.fill": "habits.icon.done",
+        "star.fill": "habits.icon.star",
+        "book.fill": "habits.icon.reading",
+        "brain.head.profile": "habits.icon.mind",
+        "music.note": "habits.icon.music",
+        "headphones": "habits.icon.headphones"
+    ]
 }

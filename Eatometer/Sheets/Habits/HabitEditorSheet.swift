@@ -154,28 +154,41 @@ struct HabitEditorSheet: View {
         .presentationDragIndicator(.visible)
     }
 
-    /// "Icon  ★ ›" row – opens the symbol picker as an inline menu.
+    /// "Icon  ★ ⌃⌄" row — a menu field, which is what it is.
+    ///
+    /// It used to read "Edit ›": the word belongs on a row that pushes a screen,
+    /// and `chevron.right` says the same thing again. Nothing is pushed here —
+    /// a menu drops down in place — and the platform spells that
+    /// `chevron.up.chevron.down`, as every other menu row in the app does.
     private var iconRow: some View {
         EOListRow(title: Text("habits.editor.icon")) {
             Menu {
                 Picker("", selection: $icon) {
                     ForEach(HabitPalette.icons, id: \.self) { symbol in
-                        Label(symbol, systemImage: symbol).tag(symbol)
+                        // Named, not addressed. The tag stays the symbol, so
+                        // what is stored is unchanged.
+                        Label {
+                            Text(verbatim: HabitPalette.title(for: symbol))
+                        } icon: {
+                            Image(systemName: symbol)
+                        }
+                        .tag(symbol)
                     }
                 }
                 .labelsHidden()
             } label: {
                 HStack(spacing: 8) {
-                    Text("common.edit")
-                        .font(EOTheme.Typography.rowValue)
-                        .foregroundStyle(.secondary)
                     Image(systemName: icon)
                         .font(.system(size: 18))
                         .foregroundStyle(selectedColor)
-                    EOChevron()
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.secondary.opacity(0.65))
                 }
             }
             .fixedSize()
+            .accessibilityLabel(Text("habits.editor.icon"))
+            .accessibilityValue(Text(verbatim: HabitPalette.title(for: icon)))
         }
     }
 
@@ -415,6 +428,9 @@ struct HabitEditorSheet: View {
                         )
                 }
                 .buttonStyle(.plain)
+                // A grid of drawings reads as nothing at all through VoiceOver
+                // without this — the symbol name is an address, not a label.
+                .accessibilityLabel(Text(verbatim: HabitPalette.title(for: sym)))
             }
         }
     }

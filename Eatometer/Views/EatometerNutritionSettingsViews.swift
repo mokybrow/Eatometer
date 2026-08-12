@@ -99,12 +99,16 @@ struct EatometerMealPlanSettingsView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: EOTheme.Metrics.headerSpacing) {
                 EOCard {
-                    EOStepperRow(
-                        title: Text(verbatim: "\(NSLocalizedString("mealplan.calories", comment: "Calories")): \(goal.calories)"),
-                        canDecrement: goal.calories > 500,
-                        canIncrement: goal.calories < 10_000,
-                        onDecrement: { goal.calories = max(500, goal.calories - 50) },
-                        onIncrement: { goal.calories = min(10_000, goal.calories + 50) }
+                    // Typed as well as stepped: a plan is a figure someone
+                    // arrived at, not something to be nudged to in fifties.
+                    EOStepperFieldRow(
+                        title: Text(verbatim: EOStepperFieldRow.title(
+                            NSLocalizedString("mealplan.calories", comment: "Calories"),
+                            unit: NSLocalizedString("diary.kcal", comment: "Calories unit")
+                        )),
+                        value: $goal.calories,
+                        range: 500...10_000,
+                        step: 50
                     )
                     EORowSeparator()
 
@@ -122,6 +126,11 @@ struct EatometerMealPlanSettingsView: View {
                         "common.save",
                         isEnabled: macroTotal == 100 && goal != diaryService.dailyGoal
                     ) {
+                        // The keypad has no return key and this row is not the
+                        // keyboard, so a figure still being typed has not been
+                        // settled against the allowed range yet. Putting the
+                        // keyboard away is what settles it.
+                        PlatformSupport.dismissActiveInput()
                         diaryService.setDailyGoal(goal)
                     }
                 }
@@ -137,23 +146,31 @@ struct EatometerMealPlanSettingsView: View {
             .padding(.top, 12)
             .padding(.bottom, 28)
         }
+        // The number pad has no return key and the rows no longer put a Done
+        // button above it, so dragging the page is what puts it away.
+        .dismissesKeyboardInteractively()
         .eoPageBackground()
         .navigationTitle("profile.nutrition.meal_plan")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { goal = diaryService.dailyGoal }
     }
 
-    /// Mock-up row: "Protein: 20%" with the gram value underneath and a stepper.
+    /// Mock-up row: "Protein, %" with the gram value underneath, then the share
+    /// and a stepper.
+    ///
+    /// The share used to be part of the title, which made it read-only. Three
+    /// shares have to add up to exactly 100, and getting there in fives is a
+    /// puzzle when the answer — 30, 25, 45 — is already known.
     private func macroRow(_ titleKey: String, percent: Binding<Int>, grams: Int) -> some View {
-        let title = "\(NSLocalizedString(titleKey, comment: "Macro")): \(percent.wrappedValue)%"
-
-        return EOStepperRow(
-            title: Text(verbatim: title),
+        EOStepperFieldRow(
+            title: Text(verbatim: EOStepperFieldRow.title(
+                NSLocalizedString(titleKey, comment: "Macro"),
+                unit: "%"
+            )),
             subtitle: Text(verbatim: String(format: NSLocalizedString("mealplan.grams", comment: "Macro grams"), grams)),
-            canDecrement: percent.wrappedValue > 0,
-            canIncrement: percent.wrappedValue < 100,
-            onDecrement: { percent.wrappedValue = max(0, percent.wrappedValue - 5) },
-            onIncrement: { percent.wrappedValue = min(100, percent.wrappedValue + 5) }
+            value: percent,
+            range: 0...100,
+            step: 5
         )
     }
 }

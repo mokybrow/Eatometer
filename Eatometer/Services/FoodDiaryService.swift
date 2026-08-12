@@ -98,7 +98,12 @@ final class FoodDiaryService: ObservableObject {
     private static func normalizedManualNutritionName(_ rawValue: String) -> String {
         let trimmedValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedValue.isEmpty else { return localizedManualNutritionItemName }
-        return isManualNutritionName(trimmedValue) ? localizedManualNutritionItemName : trimmedValue
+        let resolved = isManualNutritionName(trimmedValue) ? localizedManualNutritionItemName : trimmedValue
+        // The note packs the name and four numbers into one string separated by
+        // bars, and the reader identifies the payload by counting fields. A name
+        // carrying a bar of its own would push the count past five and the whole
+        // entry would read back as nutrition-less.
+        return resolved.replacingOccurrences(of: "|", with: " ")
     }
 
     private struct DiaryCacheSnapshot: Codable {
@@ -445,7 +450,9 @@ final class FoodDiaryService: ObservableObject {
         waterIntakeByDay[key] = newTotal
         persistWaterIntake()
         scheduleWaterIntakeSync(total: newTotal, delta: newTotal - current, for: day)
-
+        if newTotal != current {
+            Task { await syncWaterToHealthIfEnabled(for: day) }
+        }
     }
 
     func setWaterIntake(_ milliliters: Int, for day: Date) {
@@ -456,10 +463,10 @@ final class FoodDiaryService: ObservableObject {
         persistWaterIntake()
         scheduleWaterIntakeSync(total: clamped, delta: nil, for: day)
 
-        // Health only accepts additive samples, so mirror the increase only.
-        let added = clamped - previous
-        if added > 0 {
-            Task { await exportWaterToHealthIfEnabled(milliliters: added, date: day) }
+        // Reconciled rather than topped up: the sheet can take water back off
+        // the day, and an additive mirror had no way to express that.
+        if clamped != previous {
+            Task { await syncWaterToHealthIfEnabled(for: day) }
         }
     }
 
@@ -827,6 +834,9 @@ final class FoodDiaryService: ObservableObject {
 
     func saveMeal(_ meal: MealEntry) async -> Bool {
         let assignedCategoryID = normalizedCategoryID(for: meal)
+        // Read before the write, so a meal moved to another date can be taken
+        // off the day it came from.
+        let previousDay = storedMealRecord(id: meal.id)?.day
         guard authService != nil else {
             var updatedMeal = meal
             updatedMeal.mealCategoryID = assignedCategoryID
@@ -836,6 +846,7 @@ final class FoodDiaryService: ObservableObject {
                 for: Calendar.current.startOfDay(for: updatedMeal.scheduledAt),
                 meals: mergedMealsForHistoryUpdate(with: updatedMeal)
             )
+            detachMeal(id: updatedMeal.id, movedFrom: previousDay, to: updatedMeal.scheduledAt)
             return true
         }
 
@@ -864,6 +875,7 @@ final class FoodDiaryService: ObservableObject {
                 for: Calendar.current.startOfDay(for: entry.scheduledAt),
                 meals: mergedMealsForHistoryUpdate(with: entry)
             )
+            detachMeal(id: entry.id, movedFrom: previousDay, to: entry.scheduledAt)
             lastErrorMessage = nil
             return true
         } catch {
@@ -1202,6 +1214,38 @@ final class FoodDiaryService: ObservableObject {
             meals.append(meal)
         }
         meals.sort(by: { $0.scheduledAt < $1.scheduledAt })
+    }
+
+    /// Takes a meal off the day it used to be on.
+    ///
+    /// Saving writes the day the meal is now on. Moving one to another date left
+    /// the old day still holding it: invisible while the reader is looking at
+    /// today, but wrong in the history, in the totals, and — since the day is
+    /// what gets mirrored — in Health.
+    private func detachMeal(id: UUID, movedFrom previousDay: Date?, to newDay: Date) {
+        let calendar = Calendar.current
+        guard let previousDay, !calendar.isDate(previousDay, inSameDayAs: newDay) else { return }
+
+        // Only rewrite a day the meal is actually filed under. `storedMealRecord`
+        // derives the day from the meal's own timestamp, while this reads the
+        // bucket by key; when the two disagree — a timezone change since the
+        // cache was written, say — rewriting would zero a day that still has
+        // meals in it and leave the stale one where it was.
+        let stored = storedMeals(for: previousDay)
+        guard stored.contains(where: { $0.id == id }) else { return }
+
+        let remaining = stored
+            .filter { $0.id != id }
+            .sorted(by: { $0.scheduledAt < $1.scheduledAt })
+
+        if calendar.isDate(activeDay, inSameDayAs: previousDay) {
+            meals = remaining
+        }
+        registerHistory(for: previousDay, meals: remaining)
+        // Mirrored here rather than at the one call site that knew about moves,
+        // so a meal moved by an import or an item removal also leaves the old
+        // day's calories behind in Health.
+        Task { await syncNutritionToHealthIfEnabled(for: previousDay) }
     }
 
     private func mergedMealsForHistoryUpdate(with meal: MealEntry) -> [MealEntry] {
@@ -1731,27 +1775,33 @@ final class FoodDiaryService: ObservableObject {
         await pushNutritionSettingsToRemote()
     }
 
-    /// Mirrors a saved meal into the Health app when sync is on.
-    func exportNutritionToHealthIfEnabled(
-        calories: Int,
-        protein: Int,
-        carbs: Int,
-        fat: Int,
-        date: Date
-    ) async {
+    /// Makes the Health app agree with the diary for one day.
+    ///
+    /// Called after anything that changes a day — a meal saved, edited or
+    /// deleted — rather than after additions only. The day's totals are the
+    /// truth and are stated as such, so removing a meal removes its calories
+    /// from Health instead of leaving them behind. That includes a hand-typed
+    /// entry, which is a meal item like any other as far as the day is
+    /// concerned.
+    ///
+    /// Deliberately not called on a plain refresh: reconciling means deleting
+    /// and rewriting, and doing that every time the diary loads would churn
+    /// Health for no change.
+    func syncNutritionToHealthIfEnabled(for day: Date) async {
         guard healthSyncEnabled else { return }
-        await HealthKitService.shared.saveNutrition(
-            calories: calories,
-            protein: protein,
-            carbs: carbs,
-            fat: fat,
-            date: date
+        let summary = nutritionSummary(on: day)
+        await HealthKitService.shared.replaceNutrition(
+            on: day,
+            calories: summary.calories,
+            protein: summary.protein,
+            carbs: summary.carbs,
+            fat: summary.fat
         )
     }
 
-    func exportWaterToHealthIfEnabled(milliliters: Int, date: Date) async {
-        guard healthSyncEnabled, milliliters > 0 else { return }
-        await HealthKitService.shared.saveWater(milliliters: milliliters, date: date)
+    func syncWaterToHealthIfEnabled(for day: Date) async {
+        guard healthSyncEnabled else { return }
+        await HealthKitService.shared.replaceWater(on: day, milliliters: waterIntake(for: day))
     }
 
     func pushAppSettingsToRemote() async {
@@ -2681,7 +2731,7 @@ final class FoodDiaryService: ObservableObject {
 
         return MealItemEntry(
             id: UUID(uuidString: item.id) ?? UUID(),
-            name: fallbackName.isEmpty ? (item.productID.isEmpty ? NSLocalizedString("recipe.fallback_title", comment: "Fallback recipe title") : NSLocalizedString("addmeal.item.product_fallback", comment: "Fallback product title")) : fallbackName,
+            name: unresolvedItemName(for: item, decodedName: fallbackName),
             amount: item.amount,
             unit: resolvedUnit,
             note: "",
@@ -2695,6 +2745,23 @@ final class FoodDiaryService: ObservableObject {
             productSnapshot: snapshot.product,
             recipeSnapshot: snapshot.recipe
         )
+    }
+
+    /// What to call an item whose catalog row could not be resolved.
+    ///
+    /// The name in the payload wins; failing that it is named after whatever it
+    /// points at. An item that points at nothing is one the reader typed, and
+    /// that case used to fall through to the recipe title — which is how a
+    /// hand-entered figure came back looking like a dish nobody had cooked.
+    private func unresolvedItemName(for item: Food_MealItem, decodedName: String) -> String {
+        if !decodedName.isEmpty { return decodedName }
+        if !item.recipeID.isEmpty {
+            return NSLocalizedString("recipe.fallback_title", comment: "Fallback recipe title")
+        }
+        if !item.productID.isEmpty {
+            return NSLocalizedString("addmeal.item.product_fallback", comment: "Fallback product title")
+        }
+        return Self.localizedManualNutritionItemName
     }
 
     private func serializedNote(for item: MealItemEntry) -> String {
@@ -3304,6 +3371,9 @@ final class FoodDiaryService: ObservableObject {
         }
 
         registerHistory(for: resolvedDay, meals: updatedMeals)
+        // The calories left Health with the meal, rather than staying behind as
+        // a day the reader can no longer account for.
+        Task { await syncNutritionToHealthIfEnabled(for: resolvedDay) }
     }
 
     private func registerHistory(for day: Date, meals: [MealEntry]) {

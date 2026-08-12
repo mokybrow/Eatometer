@@ -30,7 +30,6 @@ private enum ProfileDestination: Hashable {
     case nutritionSettings
     case managementSettings
     case adminPanel
-    case appearance
     case appIcon
     case name
     case username
@@ -353,8 +352,6 @@ struct ProfileSheetView: View {
             managementSettingsView
         case .adminPanel:
             AdminPanelView(authService: authService)
-        case .appearance:
-            appearanceDestinationView
         case .appIcon:
             AppIconPickerView()
         case .name:
@@ -371,17 +368,6 @@ struct ProfileSheetView: View {
             SupporterSheetView()
         case let .nutrition(destination):
             nutritionDestinationView(for: destination)
-        }
-    }
-
-    private var appearanceDestinationView: some View {
-        ProfileAppearanceEditorSheet(
-            username: avatarMonogramSource,
-            appearance: profileAppearance,
-            showsCloseButton: false
-        ) { updated in
-            profileAppearance = updated
-            userService.setProfileAppearance(updated)
         }
     }
 
@@ -760,21 +746,6 @@ struct ProfileSheetView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(spacing: 0) {
-                    toggleSettingRow(
-                        titleText: NSLocalizedString(
-                            "settings.haptics.launch",
-                            tableName: nil,
-                            bundle: .main,
-                            value: "Launch haptics",
-                            comment: "Launch haptics toggle title"
-                        ),
-                        isOn: appSettings.launchHapticsEnabled
-                    ) { newValue in
-                        appSettings.setLaunchHapticsEnabled(newValue)
-                    }
-
-                    Divider().padding(.leading, 16)
-
                     VStack(spacing: 0) {
                         HStack {
                             Text(NSLocalizedString("profile.cache.title", comment: "Cache row title"))
@@ -876,9 +847,6 @@ struct ProfileSheetView: View {
                     Spacer()
                 }
 
-                NavigationLink(value: ProfileDestination.appearance) {
-                    Label("Оформление профиля", systemImage: "person.crop.circle.badge.plus")
-                }
             }
 
             Section("Личные данные") {
@@ -914,21 +882,13 @@ struct ProfileSheetView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
+                    // No "edit" button under it any more: the avatar is drawn
+                    // from the name and there is nothing left to choose.
                     ProfileAvatarView(
                         username: avatarMonogramSource,
                         appearance: profileAppearance,
                         size: 88
                     )
-
-                    NavigationLink(value: ProfileDestination.appearance) {
-                        Text(NSLocalizedString("profile.edit.action", comment: "Edit profile action"))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.appAccentReadableText)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 8)
-                            .background(Color.appAccent, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
                 }
                 .frame(maxWidth: .infinity)
 

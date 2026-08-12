@@ -157,11 +157,27 @@ struct DiaryNutritionRingCard: View {
     let summary: NutritionSummary
     let goal: DailyNutritionGoal
 
+    private let ringLineWidth: CGFloat = 20
+
+    /// The dark disc at the centre, one stroke across.
+    ///
+    /// Matched to the stroke so that it is the same size as the round caps the
+    /// rings stand in when they are empty: an untouched card is then four dots of
+    /// one diameter rather than three around a slightly fatter fourth.
+    private var innerDiameter: CGFloat { ringLineWidth }
+
     /// Outermost ring is calories, then carbs, then protein — the order the
     /// legend on the right repeats. Each diameter is a stroke narrower on both
-    /// sides, so the three rings sit flush like in the mock-up.
-    private let ringLineWidth: CGFloat = 20
-    private var ringDiameters: [CGFloat] { [143, 103, 63] }
+    /// sides than the one outside it, so the three rings sit flush like in the
+    /// mock-up.
+    ///
+    /// Measured out from the hole rather than written down as 143/103/63, which
+    /// is where the mismatch came from: those left 23pt in the middle, three
+    /// more than the stroke. Deriving them keeps the hole and the caps equal if
+    /// the stroke ever changes.
+    private var ringDiameters: [CGFloat] {
+        (1...3).reversed().map { innerDiameter + ringLineWidth * 2 * CGFloat($0) }
+    }
 
     private var rings: [MacroRing] {
         [
@@ -201,12 +217,17 @@ struct DiaryNutritionRingCard: View {
                     }
 
                     // Plugs the hole left by the innermost ring.
+                    //
+                    // Card colour, because the middle of a ring is nothing — it
+                    // is where the card shows through. It was `Color.primary`,
+                    // which is ink: a black dot in light mode and a white one in
+                    // the dark, reading as a fourth element rather than as the
+                    // absence of one. The disc is still drawn rather than
+                    // dropped, because the end caps cast a shadow that would
+                    // otherwise bleed into the gap.
                     Circle()
-                        .fill(Color.primary)
-                        .frame(
-                            width: ringDiameters[2] - ringLineWidth * 2,
-                            height: ringDiameters[2] - ringLineWidth * 2
-                        )
+                        .fill(EOTheme.Palette.card)
+                        .frame(width: innerDiameter, height: innerDiameter)
                 }
                 .frame(width: ringDiameters[0], height: ringDiameters[0])
 

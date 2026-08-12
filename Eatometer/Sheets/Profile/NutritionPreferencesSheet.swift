@@ -1264,6 +1264,16 @@ struct NutritionPreferencesSheet: View {
                             .frame(width: 44, height: 44)
                             .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
+                        // Takes the width left over by the symbol and the tick
+                        // rather than sharing it with a Spacer.
+                        //
+                        // A Spacer here was the reason the description broke over
+                        // three narrow lines with a gap beside it: an HStack
+                        // splits its width between the flexible children, and a
+                        // Spacer is as flexible as text, so the description was
+                        // offered about half of what was free and wrapped inside
+                        // it. Pushing the tick out with a frame instead leaves
+                        // the description everything the row is not using.
                         VStack(alignment: .leading, spacing: 5) {
                             Text(plan.title)
                                 .font(.headline)
@@ -1276,8 +1286,7 @@ struct NutritionPreferencesSheet: View {
                                 .multilineTextAlignment(.leading)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-
-                        Spacer(minLength: 0)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 22, weight: .semibold))

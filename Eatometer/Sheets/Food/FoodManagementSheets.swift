@@ -1088,7 +1088,7 @@ struct FoodCatalogLookupSheet: View {
                         .padding(.vertical, 10)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Color.accentColor)
+                                .fill(EOTheme.Palette.accent)
                         )
                         .overlay(
                             Capsule(style: .continuous)
@@ -1838,7 +1838,7 @@ struct RecipeIngredientCatalogLookupSheet: View {
                         .padding(.vertical, 10)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(Color.accentColor)
+                                .fill(EOTheme.Palette.accent)
                         )
                         .overlay(
                             Capsule(style: .continuous)
@@ -2057,7 +2057,6 @@ struct FoodShareSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let payload: FoodSharePayload
-    @State private var pendingShareSheetItem: SystemShareSheetItem?
 
     private var isRecipeShare: Bool {
         payload.isRecipeShare
@@ -2121,11 +2120,17 @@ struct FoodShareSheet: View {
                     }
                     .buttonStyle(.bordered)
 
-                    PressableIconButton(action: presentShareSheet) {
-                        Label("common.share", systemImage: "square.and.arrow.up")
-                            .font(.body.weight(.semibold))
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 10)
+                    // A ShareLink, not a button raising a share sheet: this
+                    // view is itself a sheet, and SwiftUI presents one at a
+                    // time — the second was dropped and nothing happened.
+                    if let previewShareURL {
+                        ShareLink(item: previewShareURL, subject: Text(payload.title.isEmpty ? "" : payload.title)) {
+                            Label("common.share", systemImage: "square.and.arrow.up")
+                                .font(.body.weight(.semibold))
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
 
@@ -2143,21 +2148,9 @@ struct FoodShareSheet: View {
                     }
                 }
             }
-            .sheet(item: $pendingShareSheetItem) { item in
-                SystemShareSheet(draft: item) {
-                    pendingShareSheetItem = nil
-                }
-            }
         }
     }
 
-    private func presentShareSheet() {
-        if let previewShareURL {
-            pendingShareSheetItem = SystemShareSheetItem(message: payload.localizedShareMessage, url: previewShareURL)
-        } else {
-            pendingShareSheetItem = SystemShareSheetItem(message: payload.localizedShareMessage, text: resolvedShareURL)
-        }
-    }
 }
 
 final class ProductEditorState: ObservableObject, Identifiable {
@@ -2806,6 +2799,7 @@ struct ProductEditorSheet: View {
             productNutritionStepper(
                 titleKey: "addmeal.total.calories",
                 text: $state.caloriesText,
+                field: .calories,
                 unit: NSLocalizedString("diary.kcal", comment: "Calories suffix"),
                 step: 10
             )
@@ -2813,6 +2807,7 @@ struct ProductEditorSheet: View {
             productNutritionStepper(
                 titleKey: "addmeal.total.protein",
                 text: $state.proteinText,
+                field: .protein,
                 unit: NSLocalizedString("unit.grams.short", comment: "Short grams unit"),
                 step: 1
             )
@@ -2820,6 +2815,7 @@ struct ProductEditorSheet: View {
             productNutritionStepper(
                 titleKey: "addmeal.total.carbs",
                 text: $state.carbsText,
+                field: .carbs,
                 unit: NSLocalizedString("unit.grams.short", comment: "Short grams unit"),
                 step: 1
             )
@@ -2827,6 +2823,7 @@ struct ProductEditorSheet: View {
             productNutritionStepper(
                 titleKey: "addmeal.total.fat",
                 text: $state.fatText,
+                field: .fat,
                 unit: NSLocalizedString("unit.grams.short", comment: "Short grams unit"),
                 step: 1
             )
@@ -2834,27 +2831,56 @@ struct ProductEditorSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Mock-up layout: "Calories: 230" on the left, `−  |  +` capsule on the right.
+    /// Mock-up layout: "Calories, kcal" on the left, then the value and the
+    /// `−  |  +` capsule.
+    ///
+    /// The number is a field rather than part of the title. A label off a packet
+    /// is read, not arrived at — 247 kcal in steps of ten is not reachable at
+    /// all — so the steppers stay for rounding and the keypad does the rest. The
+    /// unit is named in the label so the four figures line up in a column.
+    ///
+    /// Written as its own row instead of reusing `EOStepperFieldRow`, which is
+    /// integral: these values are decimal and are already held as text, so the
+    /// field binds straight to the state and there is no draft to keep in step.
     private func productNutritionStepper(
         titleKey: String,
         text: Binding<String>,
+        field: ProductEditorField,
         unit: String,
         step: Double
     ) -> some View {
         let value = Self.resolvedDoubleValue(from: text.wrappedValue)
-        let title = "\(NSLocalizedString(titleKey, comment: "Nutrition field")): \(formatFoodAmount(value)) \(unit)"
 
-        return EOStepperRow(
-            title: Text(verbatim: title),
-            canDecrement: value > 0,
-            canIncrement: value + step <= 100_000,
-            onDecrement: {
-                text.wrappedValue = ProductEditorState.decimalFieldText(max(0, value - step))
-            },
-            onIncrement: {
-                text.wrappedValue = ProductEditorState.decimalFieldText(min(100_000, value + step))
-            }
+        let label = EOStepperFieldRow.title(
+            NSLocalizedString(titleKey, comment: "Nutrition field"),
+            unit: unit
         )
+
+        return EOListRow(title: Text(verbatim: label)) {
+            HStack(spacing: 10) {
+                // Zero is stored as an empty string by `decimalFieldText`, so
+                // the prompt shows on its own and there is no "0" to delete
+                // before typing.
+                TextField("", text: text, prompt: Text(verbatim: "0").foregroundStyle(.secondary))
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(EOTheme.Typography.rowValue.monospacedDigit())
+                    .focused($focusedField, equals: field)
+                    .frame(maxWidth: 96, alignment: .trailing)
+                    .accessibilityLabel(Text(verbatim: label))
+
+                EOStepperControl(
+                    canDecrement: value > 0,
+                    canIncrement: value < 100_000,
+                    onDecrement: {
+                        text.wrappedValue = ProductEditorState.decimalFieldText(max(0, value - step))
+                    },
+                    onIncrement: {
+                        text.wrappedValue = ProductEditorState.decimalFieldText(min(100_000, value + step))
+                    }
+                )
+            }
+        }
     }
 
     private func editableNutritionRow(

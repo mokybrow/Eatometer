@@ -9,8 +9,6 @@ struct MealTemplateDetailView: View {
     var showsDismissButton: Bool = false
 
     @State private var sharePayload: FoodSharePayload?
-    @State private var isPreparingShare = false
-    @State private var pendingShareSheetItem: SystemShareSheetItem?
     @State private var selectedProduct: ProductSummary?
     @State private var selectedRecipe: RecipeSummary?
     @State private var isEditorPresented = false
@@ -76,11 +74,6 @@ struct MealTemplateDetailView: View {
             MealTemplateEditorSheet(draft: MealTemplateDraft(summary: mealTemplate))
                 .environmentObject(catalogService)
         }
-        .sheet(item: $pendingShareSheetItem) { item in
-            SystemShareSheet(draft: item) {
-                pendingShareSheetItem = nil
-            }
-        }
         .navigationDestination(item: $selectedProduct) { product in
             ProductDetailView(productID: product.id, initialProduct: product)
                 .environmentObject(catalogService)
@@ -137,13 +130,11 @@ struct MealTemplateDetailView: View {
 
     @ViewBuilder
     private var toolbarShareButton: some View {
-        Button {
-            presentShareSheet()
-        } label: {
-            Image(systemName: "square.and.arrow.up")
-        }
-        .tint(.primary)
-        .disabled(isPreparingShare)
+        ShareMenuButton(
+            title: mealTemplate.title,
+            card: shareCard,
+            prepare: shareURL
+        )
         .accessibilityLabel(Text("common.share"))
     }
 
@@ -353,26 +344,31 @@ struct MealTemplateDetailView: View {
         }
     }
 
-    private func shareSheetItem(for payload: FoodSharePayload) -> SystemShareSheetItem? {
-        guard let url = payload.resolvedShareURL else { return nil }
-        return SystemShareSheetItem(message: payload.localizedShareMessage, url: url)
+    /// The link for this thing, made on demand and reused after the first time.
+    ///
+    /// Returns the URL rather than presenting anything: the screen is often a
+    /// sheet, and a sheet cannot raise the share sheet — so the toolbar hands
+    /// this to a `ShareLink` instead.
+    @MainActor
+    private func shareURL() async -> URL? {
+        await loadSharePayloadIfNeeded()
+        return sharePayload?.resolvedShareURL
     }
 
-    @MainActor
-    private func presentShareSheet() {
-        if let payload = sharePayload, let item = shareSheetItem(for: payload) {
-            pendingShareSheetItem = item
-            return
-        }
-        guard !isPreparingShare else { return }
-        isPreparingShare = true
-        Task {
-            await loadSharePayloadIfNeeded()
-            isPreparingShare = false
-            if let payload = sharePayload, let item = shareSheetItem(for: payload) {
-                pendingShareSheetItem = item
-            }
-        }
+    /// Built from the accessors, not the stored totals: those are zero whenever
+    /// the server sent none, and the accessors fall back to summing the items.
+    private var shareCard: ShareCard {
+        .make(
+            title: mealTemplate.title,
+            kindKey: "share.card.kind.meal_plan",
+            items: mealTemplate.items,
+            nutrition: NutritionSummary(
+                calories: mealTemplate.calories,
+                protein: mealTemplate.protein,
+                fat: mealTemplate.fat,
+                carbs: mealTemplate.carbs
+            )
+        )
     }
 
     @MainActor

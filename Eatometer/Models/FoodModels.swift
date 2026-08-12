@@ -1153,14 +1153,19 @@ struct FoodSharePayload: Identifiable, Hashable {
     let previewTitle: String? = nil
     let previewSubtitle: String? = nil
 
-    private static let foodWebBaseURL = "https://goeatometer.com"
+    private static let appShareBaseURL = "eatometer://share"
+    private static let placeholderWebShareHosts: Set<String> = [
+        "goeatometer.com",
+        "www.goeatometer.com",
+        "food.goeatometer.com"
+    ]
 
     var isRecipeShare: Bool {
         shareCode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("rshare")
     }
 
     var isMealTemplateShare: Bool {
-        shareCode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("mtshare")
+        shareCode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("tshare")
     }
 
     var isProductShare: Bool {
@@ -1169,14 +1174,17 @@ struct FoodSharePayload: Identifiable, Hashable {
 
     var resolvedShareLink: String? {
         let trimmedShareURL = shareURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedShareURL.isEmpty, URL(string: trimmedShareURL)?.scheme != nil {
+        if !trimmedShareURL.isEmpty,
+           let url = URL(string: trimmedShareURL),
+           url.scheme != nil,
+           !Self.isPlaceholderWebShareURL(url) {
             return trimmedShareURL
         }
 
         let trimmedShareCode = shareCode.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedShareCode.isEmpty, Self.isKnownShareCode(trimmedShareCode) {
             let encodedCode = trimmedShareCode.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trimmedShareCode
-            return "\(Self.foodWebBaseURL)/r/\(encodedCode)"
+            return "\(Self.appShareBaseURL)/\(encodedCode)"
         }
 
         return trimmedShareCode.isEmpty ? nil : trimmedShareCode
@@ -1194,9 +1202,17 @@ struct FoodSharePayload: Identifiable, Hashable {
     private static func isKnownShareCode(_ value: String) -> Bool {
         let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return normalized.hasPrefix("rshare")
-            || normalized.hasPrefix("mtshare")
+            || normalized.hasPrefix("tshare")
             || normalized.hasPrefix("mshare")
             || normalized.hasPrefix("pshare")
+    }
+
+    private static func isPlaceholderWebShareURL(_ url: URL) -> Bool {
+        guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+              let host = url.host?.lowercased() else {
+            return false
+        }
+        return placeholderWebShareHosts.contains(host)
     }
 
     var localizedShareSubject: String {

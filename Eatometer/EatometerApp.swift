@@ -1,5 +1,4 @@
 import SwiftUI
-import CoreHaptics
 import UIKit
 
 @main
@@ -13,7 +12,6 @@ struct EatometerApp: App {
     @StateObject private var habitsService: HabitsService
     @StateObject private var deepLinkRouter: DeepLinkRouter
     @StateObject private var supporterService: SupporterService
-    @State private var hasPlayedLaunchHaptics = false
     @State private var isBooting = true
 
     init() {
@@ -63,9 +61,6 @@ struct EatometerApp: App {
                         .zIndex(1)
                 }
             }
-                .onAppear {
-                    playLaunchHapticsIfNeeded()
-                }
                 .task {
                     let start = Date()
                     _ = await authService.bootstrapStoredSessionIfNeeded()
@@ -94,96 +89,5 @@ struct EatometerApp: App {
 
     var body: some Scene {
         mainWindowScene
-    }
-
-    private func playLaunchHapticsIfNeeded() {
-        guard !hasPlayedLaunchHaptics else { return }
-        hasPlayedLaunchHaptics = true
-        AppLaunchHaptics.shared.playIfEnabled(appSettings.launchHapticsEnabled)
-    }
-}
-
-@MainActor
-private final class AppLaunchHaptics {
-    static let shared = AppLaunchHaptics()
-
-    private var engine: CHHapticEngine?
-
-    private init() {}
-
-    func playIfEnabled(_ isEnabled: Bool) {
-        guard isEnabled else { return }
-
-        Task {
-            await playHeartbeatPattern()
-        }
-    }
-
-    private func playHeartbeatPattern() async {
-        guard CHHapticEngine.capabilitiesForHardware().supportsHaptics else {
-            await playFallbackHeartbeatPattern()
-            return
-        }
-
-        do {
-            let engine = try prepareEngine()
-            let pattern = try CHHapticPattern(events: heartbeatEvents, parameters: [])
-            let player = try engine.makePlayer(with: pattern)
-            try player.start(atTime: CHHapticTimeImmediate)
-        } catch {
-            await playFallbackHeartbeatPattern()
-        }
-    }
-
-    private func prepareEngine() throws -> CHHapticEngine {
-        if engine == nil {
-            let newEngine = try CHHapticEngine()
-            newEngine.isAutoShutdownEnabled = true
-            newEngine.stoppedHandler = { [weak self] _ in
-                Task { @MainActor in
-                    self?.engine = nil
-                }
-            }
-            newEngine.resetHandler = { [weak self] in
-                Task { @MainActor in
-                    self?.engine = nil
-                }
-            }
-            engine = newEngine
-        }
-
-        let engine = engine!
-        try engine.start()
-        return engine
-    }
-
-    private var heartbeatEvents: [CHHapticEvent] {
-        [
-            transientEvent(intensity: 0.96, sharpness: 0.30, at: 0.00),
-            transientEvent(intensity: 0.82, sharpness: 0.18, at: 0.26),
-        ]
-    }
-
-    private func transientEvent(intensity: Float, sharpness: Float, at relativeTime: TimeInterval) -> CHHapticEvent {
-        CHHapticEvent(
-            eventType: .hapticTransient,
-            parameters: [
-                CHHapticEventParameter(parameterID: .hapticIntensity, value: intensity),
-                CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness),
-            ],
-            relativeTime: relativeTime
-        )
-    }
-
-    private func playFallbackHeartbeatPattern() async {
-        let medium = UIImpactFeedbackGenerator(style: .medium)
-        let soft = UIImpactFeedbackGenerator(style: .soft)
-
-        medium.prepare()
-        medium.impactOccurred(intensity: 1.00)
-        try? await Task.sleep(nanoseconds: 260_000_000)
-
-        soft.prepare()
-        soft.impactOccurred(intensity: 0.86)
     }
 }

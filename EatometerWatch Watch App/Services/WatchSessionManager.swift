@@ -127,10 +127,10 @@ final class WatchSessionManager: NSObject, ObservableObject {
 // MARK: - WCSessionDelegate
 
 extension WatchSessionManager: WCSessionDelegate {
-    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
-
-    nonisolated func sessionDidDeactivate(_ session: WCSession) {}
-
+    // `sessionDidBecomeInactive` and `sessionDidDeactivate` are not declared
+    // here: they belong to the iOS side of WCSession, where a session can be
+    // handed from one paired watch to another. On watchOS they are marked
+    // unavailable, so implementing them is an error rather than dead code.
     nonisolated func session(
         _ session: WCSession,
         activationDidCompleteWith activationState: WCSessionActivationState,

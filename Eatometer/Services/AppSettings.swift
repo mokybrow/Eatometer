@@ -96,7 +96,6 @@ final class AppSettings: ObservableObject {
 
     @Published var listSort: ListSort
     @Published var isWaterTrackingEnabled: Bool
-    @Published var launchHapticsEnabled: Bool
     @Published var nutritionWidgetRingMetrics: [NutritionWidgetRingMetric]
     @Published var waterWidgetStepMilliliters: Int
 
@@ -110,14 +109,12 @@ final class AppSettings: ObservableObject {
 
     private let listSortKeyPrefix = "Eatometer.listSort."
     private let waterTrackingKeyPrefix = "Eatometer.waterTracking."
-    private let launchHapticsKeyPrefix = "Eatometer.launchHapticsEnabled."
     private let nutritionWidgetRingMetricsKeyPrefix = "Eatometer.widget.nutritionRingMetrics."
     private let waterWidgetStepKeyPrefix = "Eatometer.widget.waterStep."
     private var scopeUserID: String = "anon"
 
     private var listSortKey: String { listSortKeyPrefix + scopeUserID }
     private var waterTrackingKey: String { waterTrackingKeyPrefix + scopeUserID }
-    private var launchHapticsKey: String { launchHapticsKeyPrefix + scopeUserID }
     private var nutritionWidgetRingMetricsKey: String { nutritionWidgetRingMetricsKeyPrefix + scopeUserID }
     private var waterWidgetStepKey: String { waterWidgetStepKeyPrefix + scopeUserID }
 
@@ -144,7 +141,6 @@ final class AppSettings: ObservableObject {
     private init() {
         self.listSort = .addedNewest
         self.isWaterTrackingEnabled = true
-        self.launchHapticsEnabled = true
         self.nutritionWidgetRingMetrics = Self.defaultNutritionWidgetRingMetrics
         self.waterWidgetStepMilliliters = Self.defaultWaterWidgetStepMilliliters
         self.scopeUserID = Self.initialScopeUserID()
@@ -167,12 +163,6 @@ final class AppSettings: ObservableObject {
         guard isWaterTrackingEnabled != value else { return }
         isWaterTrackingEnabled = value
         UserDefaults.standard.set(value, forKey: waterTrackingKey)
-    }
-
-    func setLaunchHapticsEnabled(_ value: Bool) {
-        guard launchHapticsEnabled != value else { return }
-        launchHapticsEnabled = value
-        UserDefaults.standard.set(value, forKey: launchHapticsKey)
     }
 
     func setNutritionWidgetRingMetrics(_ value: [NutritionWidgetRingMetric]) {
@@ -209,12 +199,10 @@ final class AppSettings: ObservableObject {
         remoteSyncTask?.cancel()
         listSort = .addedNewest
         isWaterTrackingEnabled = true
-        launchHapticsEnabled = true
         nutritionWidgetRingMetrics = Self.defaultNutritionWidgetRingMetrics
         waterWidgetStepMilliliters = Self.defaultWaterWidgetStepMilliliters
         UserDefaults.standard.set(listSort.rawValue, forKey: listSortKey)
         UserDefaults.standard.set(isWaterTrackingEnabled, forKey: waterTrackingKey)
-        UserDefaults.standard.set(launchHapticsEnabled, forKey: launchHapticsKey)
         UserDefaults.standard.set(nutritionWidgetRingMetrics.map(\.rawValue), forKey: nutritionWidgetRingMetricsKey)
         UserDefaults.standard.set(waterWidgetStepMilliliters, forKey: waterWidgetStepKey)
         sharedDefaults?.set(nutritionWidgetRingMetrics.map(\.rawValue), forKey: nutritionWidgetRingMetricsKey)
@@ -240,11 +228,6 @@ final class AppSettings: ObservableObject {
             isWaterTrackingEnabled = storedWaterTrackingValue
         } else {
             isWaterTrackingEnabled = true
-        }
-        if let storedLaunchHapticsValue = defaults.object(forKey: launchHapticsKey) as? Bool {
-            launchHapticsEnabled = storedLaunchHapticsValue
-        } else {
-            launchHapticsEnabled = true
         }
         let storedRingMetrics = defaults.stringArray(forKey: nutritionWidgetRingMetricsKey)?.compactMap(NutritionWidgetRingMetric.init(rawValue:)) ?? Self.defaultNutritionWidgetRingMetrics
         nutritionWidgetRingMetrics = Self.sanitizedNutritionWidgetRingMetrics(storedRingMetrics)

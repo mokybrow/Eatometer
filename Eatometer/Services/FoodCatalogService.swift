@@ -1546,12 +1546,17 @@ final class FoodCatalogService: ObservableObject {
         return normalizedCode.lowercased().hasPrefix("rshare") ? normalizedCode : nil
     }
 
+    /// Meal-template codes, which the service issues as `tshare_…`.
+    ///
+    /// This read `mtshare`, which the service has never produced — so every
+    /// meal-template link fell through all four checks and opened nothing at
+    /// all.
     func sharedMealTemplateReference(from rawValue: String) -> String? {
         guard let normalizedCode = normalizedShareCode(from: rawValue) else {
             return nil
         }
 
-        return normalizedCode.lowercased().hasPrefix("mtshare") ? normalizedCode : nil
+        return normalizedCode.lowercased().hasPrefix("tshare") ? normalizedCode : nil
     }
 
     func sharedMealReference(from rawValue: String) -> String? {
@@ -2326,8 +2331,13 @@ final class FoodCatalogService: ObservableObject {
             return nil
         }
 
+        // The prefixes the service issues, and only those. `mtshare` used to be
+        // listed for meal templates and is not a thing the service has ever
+        // produced, so a template code was rejected here before anything
+        // downstream could recognise it.
         let normalized = trimmed.lowercased()
-        guard normalized.hasPrefix("rshare") || normalized.hasPrefix("mshare") || normalized.hasPrefix("mtshare") || normalized.hasPrefix("pshare") else {
+        let known = ["rshare", "mshare", "tshare", "pshare"]
+        guard known.contains(where: normalized.hasPrefix) else {
             return nil
         }
 

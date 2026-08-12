@@ -1026,7 +1026,9 @@ private struct FriendProfileView: View {
     private var heroCard: some View {
         VStack(spacing: 14) {
             ProfileAvatarView(username: displayedProfile.avatarSource, appearance: displayedProfile.appearance, size: 104)
-                .overlay(Circle().stroke(Color.primary.opacity(0.10), lineWidth: 1))
+                // Cut to the avatar's own outline, so the ring follows it
+                // rather than describing a circle that is no longer there.
+                .overlay(ProfileAvatarView.shape(size: 104).stroke(Color.primary.opacity(0.10), lineWidth: 1))
 
             VStack(spacing: 4) {
                 Text(displayedProfile.displayName)

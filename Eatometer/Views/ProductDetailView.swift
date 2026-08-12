@@ -15,8 +15,6 @@ struct ProductDetailView: View {
     @State private var editingState: ProductEditorState?
     @State private var showsAdditionalNutrition = false
     @State private var sharePayload: FoodSharePayload?
-    @State private var isPreparingShare = false
-    @State private var pendingShareSheetItem: SystemShareSheetItem?
     @State private var reviewSubmission: ProductSubmissionSummary?
 
     private struct NutrientDetail: Identifiable {
@@ -213,11 +211,6 @@ struct ProductDetailView: View {
             ProductEditorSheet(state: state)
                 .environmentObject(catalogService)
         }
-        .sheet(item: $pendingShareSheetItem) { item in
-            SystemShareSheet(draft: item) {
-                pendingShareSheetItem = nil
-            }
-        }
     }
 
     private func deleteProduct() {
@@ -308,13 +301,11 @@ struct ProductDetailView: View {
 
     @ViewBuilder
     private var toolbarShareButton: some View {
-        Button {
-            presentShareSheet()
-        } label: {
-            Image(systemName: "square.and.arrow.up")
-        }
-        .tint(.primary)
-        .disabled(isPreparingShare)
+        ShareMenuButton(
+            title: product.name,
+            card: .make(product: product),
+            prepare: shareURL
+        )
         .accessibilityLabel(Text("common.share"))
     }
 
@@ -465,26 +456,15 @@ struct ProductDetailView: View {
         "\(formattedFoodAmountValue(value, maximumFractionDigits: value < 10 ? 1 : 0)) \(localizedNutritionUnit(unit))"
     }
 
-    private func shareSheetItem(for payload: FoodSharePayload) -> SystemShareSheetItem? {
-        guard let url = payload.resolvedShareURL else { return nil }
-        return SystemShareSheetItem(message: payload.localizedShareMessage, url: url)
-    }
-
+    /// The link for this thing, made on demand and reused after the first time.
+    ///
+    /// Returns the URL rather than presenting anything: the screen is often a
+    /// sheet, and a sheet cannot raise the share sheet — so the toolbar hands
+    /// this to a `ShareLink` instead.
     @MainActor
-    private func presentShareSheet() {
-        if let payload = sharePayload, let item = shareSheetItem(for: payload) {
-            pendingShareSheetItem = item
-            return
-        }
-        guard !isPreparingShare else { return }
-        isPreparingShare = true
-        Task {
-            await loadSharePayloadIfNeeded()
-            isPreparingShare = false
-            if let payload = sharePayload, let item = shareSheetItem(for: payload) {
-                pendingShareSheetItem = item
-            }
-        }
+    private func shareURL() async -> URL? {
+        await loadSharePayloadIfNeeded()
+        return sharePayload?.resolvedShareURL
     }
 
     @MainActor

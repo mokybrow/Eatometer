@@ -24,7 +24,30 @@ final class HealthKitService {
 
     private let store = HKHealthStore()
 
+    /// The reconcile currently in flight, if any.
+    ///
+    /// Reconciling is delete-then-write with an await in the middle, so two of
+    /// them running at once interleave: both delete, then both write, and the
+    /// day ends up counted twice — or one delete lands after the other's write
+    /// and the day comes out empty. Tapping `+` twice in the water sheet is
+    /// exactly that. Chaining makes them queue instead.
+    private var pendingSync: Task<Void, Never>?
+
     private init() {}
+
+    /// Runs `work` after whatever reconcile is already going.
+    private func serialized(_ work: @escaping @MainActor () async -> Void) async {
+        let previous = pendingSync
+        let task = Task { @MainActor in
+            await previous?.value
+            await work()
+        }
+        pendingSync = task
+        await task.value
+        // Released once it is the tail of the chain, so the singleton does not
+        // hold the last reconcile for the life of the app.
+        if pendingSync == task { pendingSync = nil }
+    }
 
     var isAvailable: Bool {
         HKHealthStore.isHealthDataAvailable()
@@ -162,37 +185,98 @@ final class HealthKitService {
 
     // MARK: - Writing
 
-    /// Saves a nutrition entry. Silently no-ops when sync is off or denied.
-    func saveNutrition(
+    private static let nutritionTypes: [(HKQuantityTypeIdentifier, HKUnit)] = [
+        (.dietaryEnergyConsumed, .kilocalorie()),
+        (.dietaryProtein, .gram()),
+        (.dietaryCarbohydrates, .gram()),
+        (.dietaryFatTotal, .gram())
+    ]
+
+    /// Makes a day in Health say what the diary says.
+    ///
+    /// Written as replace rather than add because HealthKit samples are
+    /// additive and anonymous to us: once "450 kcal" is in there, deleting the
+    /// meal it came from leaves nothing to subtract it from. Adding only the
+    /// increase — which is what this used to do — meant a meal edited downwards
+    /// or thrown away kept its calories in Health for good.
+    ///
+    /// Clearing the day and writing the totals again is also self-correcting: a
+    /// write lost to a crash, or a figure that drifted for any other reason,
+    /// is right again after the next change to that day.
+    func replaceNutrition(
+        on day: Date,
         calories: Int,
         protein: Int,
         carbs: Int,
-        fat: Int,
-        date: Date = .now
+        fat: Int
     ) async {
         guard isAvailable else { return }
 
-        var samples: [HKQuantitySample] = []
-        samples.append(contentsOf: quantitySample(.dietaryEnergyConsumed, unit: .kilocalorie(), value: Double(calories), date: date))
-        samples.append(contentsOf: quantitySample(.dietaryProtein, unit: .gram(), value: Double(protein), date: date))
-        samples.append(contentsOf: quantitySample(.dietaryCarbohydrates, unit: .gram(), value: Double(carbs), date: date))
-        samples.append(contentsOf: quantitySample(.dietaryFatTotal, unit: .gram(), value: Double(fat), date: date))
+        await serialized { [self] in
+            let values = [calories, protein, carbs, fat]
+            var samples: [HKQuantitySample] = []
 
-        guard !samples.isEmpty else { return }
-        try? await store.save(samples)
+            for (index, entry) in Self.nutritionTypes.enumerated() {
+                await deleteOwnSamples(entry.0, on: day)
+                samples.append(contentsOf: quantitySample(
+                    entry.0,
+                    unit: entry.1,
+                    value: Double(values[index]),
+                    date: startOfDay(day)
+                ))
+            }
+
+            guard !samples.isEmpty else { return }
+            try? await store.save(samples)
+        }
     }
 
-    func saveWater(milliliters: Int, date: Date = .now) async {
-        guard isAvailable, milliliters > 0 else { return }
+    /// Same bargain as nutrition: water can be taken back off the day in the
+    /// app, so the day is rewritten rather than topped up.
+    func replaceWater(on day: Date, milliliters: Int) async {
+        guard isAvailable else { return }
 
-        let samples = quantitySample(
-            .dietaryWater,
-            unit: .literUnit(with: .milli),
-            value: Double(milliliters),
-            date: date
+        await serialized { [self] in
+            await deleteOwnSamples(.dietaryWater, on: day)
+
+            let samples = quantitySample(
+                .dietaryWater,
+                unit: .literUnit(with: .milli),
+                value: Double(milliliters),
+                date: startOfDay(day)
+            )
+            guard !samples.isEmpty else { return }
+            try? await store.save(samples)
+        }
+    }
+
+    /// Removes what this app wrote for one day, and nothing else.
+    ///
+    /// `deleteObjects(of:predicate:)` only ever removes samples saved by the
+    /// calling app, which is exactly the rule wanted here: a figure typed
+    /// straight into the Health app, or written by another tracker, belongs to
+    /// whoever put it there.
+    private func deleteOwnSamples(_ identifier: HKQuantityTypeIdentifier, on day: Date) async {
+        guard let type = HKObjectType.quantityType(forIdentifier: identifier),
+              store.authorizationStatus(for: type) == .sharingAuthorized else { return }
+
+        let start = startOfDay(day)
+        guard let end = Calendar.current.date(byAdding: .day, value: 1, to: start) else { return }
+        let predicate = HKQuery.predicateForSamples(
+            withStart: start,
+            end: end,
+            options: [.strictStartDate]
         )
-        guard !samples.isEmpty else { return }
-        try? await store.save(samples)
+
+        _ = try? await store.deleteObjects(of: type, predicate: predicate)
+    }
+
+    /// Samples are stamped at the start of the day rather than at the moment of
+    /// the meal. The diary reconciles a whole day at a time, so a per-meal
+    /// timestamp would be a detail this app can no longer honour — and a wrong
+    /// time is worse than an obviously nominal one.
+    private func startOfDay(_ date: Date) -> Date {
+        Calendar.current.startOfDay(for: date)
     }
 
     private func quantitySample(

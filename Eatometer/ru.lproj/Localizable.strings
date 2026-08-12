@@ -146,7 +146,7 @@
 "common.ok" = "ОК";
 "common.cancel" = "Отмена";
 "common.delete" = "Удалить";
-"common.edit" = "Редактировать";
+"common.edit" = "Править";
 "common.close" = "Закрыть";
 "common.done" = "Готово";
 "profile.edit.action" = "Править";
@@ -269,7 +269,6 @@
 "settings.app_icon.watermelon" = "Арбуз";
 "settings.notifications.system" = "Системные уведомления";
 "profile.notifications.inbox.title" = "Уведомления";
-"settings.haptics.launch" = "Вибро при запуске";
 "settings.notifications.meal_reminders" = "Уведомления о приёме пищи";
 "push.meal_reminder.title" = "Время записать приём пищи 🍽️";
 "push.meal_reminder.body" = "%@: пора записать!";
@@ -392,7 +391,7 @@
 "recipe.grams_value" = "%d г";
 "recipe.nutrition.summary" = "%d ккал • Б %d • Ж %d • У %d";
 "recipe.editor.new" = "Новый рецепт";
-"recipe.editor.edit" = "Редактировать рецепт";
+"recipe.editor.edit" = "Править рецепт";
 "recipe.editor.section.basic" = "Основное";
 "recipe.editor.emoji.title" = "Иконка рецепта";
 "recipe.editor.emoji.hint" = "Нажмите, чтобы выбрать эмодзи";
@@ -664,7 +663,7 @@
 "product.nutrient.vitamin_e" = "Витамин E";
 "product.nutrient.vitamin_b12" = "Витамин B12";
 "product.editor.new" = "Новый продукт";
-"product.editor.edit" = "Редактировать продукт";
+"product.editor.edit" = "Править продукт";
 "product.editor.save_error.title" = "Не удалось сохранить";
 "recipe.import.code_placeholder" = "Например, mshare_xxx";
 "nutrition.mealslots.add" = "Добавить приём пищи";
@@ -919,7 +918,7 @@
 "onboarding.new.goal" = "Какова ваша цель?";
 "onboarding.new.choose_goal" = "Выберите цель";
 "onboarding.new.goal.help" = "После нажатия кнопки «Готово» для вас будет составлен рекомендованный план питания; изменить его можно в любой момент в настройках.";
-"onboarding.new.finishing" = "Готовим блюдо";
+"onboarding.new.finishing" = "Почти готово";
 "profile.name.help" = "После сохранения новое имя будет использоваться на всей платформе.";
 "profile.email.help" = "После сохранения мы отправим ссылку подтверждения на новую почту. После подтверждения она будет использоваться для уведомлений.";
 "water.settings.daily_plan" = "Дневной план: %d мл";
@@ -967,7 +966,7 @@
 "profile.notifications.delete" = "Удалить уведомление";
 "habits.editor.days_remaining_value" = "Осталось дней: %d";
 "today.summary.title" = "Сводка";
-"addmeal.macros.hint" = "Шаг изменения макронутриентов — 1 г, для калорий — 10 ккал. После ввода нажмите «Сохранить», чтобы применить изменения.";
+"addmeal.macros.hint" = "Значения можно ввести с клавиатуры или менять кнопками: шаг — 1 г, для калорий — 10 ккал.";
 "common.clear" = "Очистить";
 "habits.detail.time_elapsed" = "Прошло времени:";
 "habits.detail.time_remaining" = "Осталось времени:";
@@ -982,7 +981,6 @@
 "settings.app_icon.unsupported" = "Это устройство не поддерживает альтернативные иконки.";
 "addmeal.set_portion" = "Указать порцию";
 "water.was_removed" = "Будет убрано";
-"water.new_value" = "Новое значение";
 "water.adjust.hint" = "Минусом можно вернуть воду, если отметили её по ошибке.";
 "water.quick_add" = "Добавить %d мл";
 "water.quick_remove" = "Убрать %d мл";
@@ -1011,3 +1009,45 @@
 "recipe.editor.save_error_title" = "Не удалось сохранить рецепт";
 "settings.listsort.title" = "Сортировка";
 "today.stats.macros.title" = "Макронутриенты";
+
+/* Habit icon names */
+"habits.icon.leaf" = "Лист";
+"habits.icon.drop" = "Вода";
+"habits.icon.flame" = "Серия";
+"habits.icon.bolt" = "Энергия";
+"habits.icon.heart" = "Здоровье";
+"habits.icon.walk" = "Ходьба";
+"habits.icon.run" = "Бег";
+"habits.icon.workout" = "Тренировка";
+"habits.icon.meal" = "Еда";
+"habits.icon.drink" = "Кофе";
+"habits.icon.vegetables" = "Овощи";
+"habits.icon.takeaway" = "Еда навынос";
+"habits.icon.sleep" = "Сон";
+"habits.icon.bed" = "Отбой";
+"habits.icon.alarm" = "Будильник";
+"habits.icon.morning" = "Утро";
+"habits.icon.avoid" = "Отказ";
+"habits.icon.less" = "Сократить";
+"habits.icon.done" = "Выполнено";
+"habits.icon.star" = "Звезда";
+"habits.icon.reading" = "Чтение";
+"habits.icon.mind" = "Разум";
+"habits.icon.music" = "Музыка";
+"habits.icon.headphones" = "Наушники";
+
+/* Share card */
+"share.card.composition" = "Состав";
+"share.card.more_items" = "и ещё %d";
+"share.card.total" = "Всего";
+"share.card.per_serving" = "На порцию";
+"share.card.per_100g" = "На 100 г";
+"share.card.servings" = "Порций: %d";
+"share.card.footer" = "Считаем в Eatometer";
+"share.card.kind.recipe" = "Рецепт";
+"share.card.kind.product" = "Продукт";
+"share.card.kind.meal" = "Приём пищи";
+"share.card.kind.meal_plan" = "Рацион";
+"share.card.servings_value" = "Порций: %@";
+"share.action.link" = "Отправить ссылку";
+"share.action.card" = "Отправить карточку";

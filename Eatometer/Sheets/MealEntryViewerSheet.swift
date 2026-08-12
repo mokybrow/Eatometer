@@ -11,7 +11,10 @@ struct MealEntryViewerSheet: View {
     let title: String
     let items: [MealItemEntry]
     let nutrition: NutritionSummary
-    let onShare: () -> Void
+    /// Creates — or reuses — the link for this meal. Returns nil when the meal
+    /// cannot be shared.
+    let prepareShare: () async -> URL?
+
 
     private var nutritionFactsTitle: String {
         NSLocalizedString(
@@ -50,11 +53,18 @@ struct MealEntryViewerSheet: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .eoPageBackground()
-            .eoSheetChrome(
-                title: Text(verbatim: title),
-                trailing: .symbol(name: "square.and.arrow.up", action: onShare),
-                onClose: { dismiss() }
-            )
+            .eoSheetChrome(title: Text(verbatim: title), onClose: { dismiss() }) {
+                ShareMenuButton(
+                    title: title,
+                    card: .make(
+                        title: title,
+                        kindKey: "share.card.kind.meal",
+                        items: items,
+                        nutrition: nutrition
+                    ),
+                    prepare: prepareShare
+                )
+            }
         }
     }
 

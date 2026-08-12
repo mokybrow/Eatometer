@@ -427,7 +427,7 @@ struct MealTemplateEditorSheet: View {
     @MainActor
     private func presentShareSheet() {
         if let payload = sharePayload, let resolvedShareURL {
-            pendingShareSheetItem = SystemShareSheetItem(message: payload.localizedShareMessage, url: resolvedShareURL)
+            pendingShareSheetItem = shareSheetItem(for: payload, url: resolvedShareURL)
             return
         }
         guard !isPreparingShare else { return }
@@ -436,9 +436,26 @@ struct MealTemplateEditorSheet: View {
             await loadSharePayload()
             isPreparingShare = false
             if let payload = sharePayload, let resolvedShareURL {
-                pendingShareSheetItem = SystemShareSheetItem(message: payload.localizedShareMessage, url: resolvedShareURL)
+                pendingShareSheetItem = shareSheetItem(for: payload, url: resolvedShareURL)
             }
         }
+    }
+
+    /// Drawn from the draft rather than from what the server returned: the
+    /// editor is the one place where the two can differ, and the card should
+    /// show what was just shared.
+    @MainActor
+    private func shareSheetItem(for payload: FoodSharePayload, url: URL) -> SystemShareSheetItem {
+        SystemShareSheetItem(
+            message: payload.localizedShareMessage,
+            url: url,
+            card: .make(
+                title: draft.title,
+                kindKey: "share.card.kind.meal_plan",
+                items: draft.items,
+                nutrition: liveNutrition
+            )
+        )
     }
 
     private func resolveItemNutritionIfNeeded() async {

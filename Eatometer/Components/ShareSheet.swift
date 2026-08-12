@@ -10,10 +10,14 @@ import UIKit
 final class ShareLinkItemSource: NSObject, UIActivityItemSource {
     private let message: String
     private let url: URL
+    /// The card, when one was drawn. Used only for the sheet's own preview —
+    /// the picture itself travels as a separate activity item.
+    private let preview: UIImage?
 
-    init(message: String, url: URL) {
+    init(message: String, url: URL, preview: UIImage? = nil) {
         self.message = message.trimmingCharacters(in: .whitespacesAndNewlines)
         self.url = url
+        self.preview = preview
     }
 
     private var combinedText: String {
@@ -47,8 +51,12 @@ final class ShareLinkItemSource: NSObject, UIActivityItemSource {
         metadata.originalURL = url
         metadata.url = url
         metadata.title = message.isEmpty ? url.absoluteString : message
-        // No iconProvider / imageProvider on purpose: iOS renders a plain local
-        // preview instead of requesting the generated card from goeatometer.
+        // The image provider is the card the app drew, if it drew one. Still no
+        // remote fetch: iOS never asks goeatometer for an Open Graph card, so
+        // the preview is whatever is already in hand and appears immediately.
+        if let preview {
+            metadata.imageProvider = NSItemProvider(object: preview)
+        }
         return metadata
     }
 }
@@ -59,8 +67,23 @@ struct SystemShareSheetItem: Identifiable {
 
     /// Localized accompanying text plus the shared link, delivered through a
     /// custom item source so no goeatometer card is generated at share time.
-    init(message: String, url: URL) {
-        self.items = [ShareLinkItemSource(message: message, url: url)]
+    ///
+    /// A drawn card travels alongside as its own item rather than replacing the
+    /// link. The picture is what a recipient can read without the app; the link
+    /// is what puts the thing into their diary. Neither substitutes for the
+    /// other, and a target that only takes one of them still gets something
+    /// useful.
+    /// Main-actor because drawing the card is. The app target defaults to
+    /// `nonisolated`, so without this the renderer would be called from wherever
+    /// the caller happens to be — which is the main thread today, by luck of
+    /// every call site sitting behind a `@MainActor presentShareSheet()`, and
+    /// silently not guaranteed.
+    @MainActor
+    init(message: String, url: URL, card: ShareCard? = nil) {
+        let image = card.map { ShareCardRenderer.image(for: $0) } ?? nil
+        var items: [Any] = [ShareLinkItemSource(message: message, url: url, preview: image)]
+        if let image { items.append(image) }
+        self.items = items
     }
 
     /// Fallback for payloads that only expose a raw string (e.g. a share code

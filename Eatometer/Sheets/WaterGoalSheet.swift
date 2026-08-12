@@ -12,30 +12,41 @@ struct AddWaterSheet: View {
     @State private var deltaMilliliters: Int
 
     private let step: Int
-    private let maximumMilliliters = 10_000
+    /// Static so the opening delta can be clamped against it in `init`, before
+    /// the instance exists.
+    private static let maximumMilliliters = 10_000
 
     init(currentMilliliters: Int, goalMilliliters: Int, step: Int = 200, onSet: @escaping (Int) -> Void) {
+        let resolvedStep = max(50, step)
         self.initialMilliliters = currentMilliliters
         self.goalMilliliters = goalMilliliters
-        self.step = max(50, step)
+        self.step = resolvedStep
         self.onSet = onSet
-        self._deltaMilliliters = State(initialValue: max(50, step))
+        // Opening on a figure the row cannot reach would show a number the
+        // stepper refuses to move, so the day's remaining headroom wins.
+        self._deltaMilliliters = State(
+            initialValue: min(resolvedStep, max(0, Self.maximumMilliliters - currentMilliliters))
+        )
     }
 
     /// Water can only be taken back down to zero, and only added up to the cap.
     private var minimumDelta: Int { -initialMilliliters }
-    private var maximumDelta: Int { maximumMilliliters - initialMilliliters }
+    private var maximumDelta: Int { Self.maximumMilliliters - initialMilliliters }
 
     private var resultingMilliliters: Int {
-        min(max(initialMilliliters + deltaMilliliters, 0), maximumMilliliters)
+        min(max(initialMilliliters + deltaMilliliters, 0), Self.maximumMilliliters)
     }
 
     private var isRemoving: Bool { deltaMilliliters < 0 }
 
+    private var millilitresUnit: String {
+        NSLocalizedString("unit.milliliters.short", comment: "Millilitres unit short title")
+    }
+
     /// "+200 ml" / "−200 ml" – the sign makes the direction obvious at a glance.
     private var deltaText: String {
         let sign = isRemoving ? "−" : "+"
-        return "\(sign)\(abs(deltaMilliliters)) ml"
+        return "\(sign)\(abs(deltaMilliliters)) \(millilitresUnit)"
     }
 
     private var deltaRowTitle: LocalizedStringKey {
@@ -48,7 +59,7 @@ struct AddWaterSheet: View {
                 EOCard {
                     EOListRow(
                         title: Text("water.current_value"),
-                        accessory: .value(Text(verbatim: "\(initialMilliliters) ml"))
+                        accessory: .value(Text(verbatim: "\(initialMilliliters) \(millilitresUnit)"))
                     )
                     EORowSeparator()
 
@@ -64,17 +75,15 @@ struct AddWaterSheet: View {
                     }
                     EORowSeparator()
 
-                    EOListRow(
-                        title: Text("water.new_value"),
-                        accessory: .value(Text(verbatim: "\(resultingMilliliters) ml"))
-                    )
-                    EORowSeparator()
-
+                    // Stepped only, deliberately. Water is logged in glasses and
+                    // bottles, not in arbitrary figures, and the amount is a
+                    // correction to the day rather than a measurement — a typed
+                    // field invites precision the reading does not have.
                     EOStepperRow(
                         title: Text("water.add"),
                         subtitle: Text(String(format: NSLocalizedString("water.step_format", comment: "Water step"), step)),
-                        canDecrement: deltaMilliliters - step >= minimumDelta,
-                        canIncrement: deltaMilliliters + step <= maximumDelta,
+                        canDecrement: deltaMilliliters > minimumDelta,
+                        canIncrement: deltaMilliliters < maximumDelta,
                         onDecrement: { deltaMilliliters = max(minimumDelta, deltaMilliliters - step) },
                         onIncrement: { deltaMilliliters = min(maximumDelta, deltaMilliliters + step) }
                     )

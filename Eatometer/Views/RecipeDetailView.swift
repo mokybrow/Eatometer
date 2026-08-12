@@ -10,8 +10,6 @@ struct RecipeDetailView: View {
     var showsDismissButton: Bool = false
 
     @State private var sharePayload: FoodSharePayload?
-    @State private var isPreparingShare = false
-    @State private var pendingShareSheetItem: SystemShareSheetItem?
     @State private var isCookingModePresented = false
     @State private var selectedIngredientProduct: ProductSummary?
     @State private var selectedIngredientRecipe: RecipeSummary?
@@ -132,11 +130,6 @@ struct RecipeDetailView: View {
             RecipeCookingModeView(recipe: recipe)
                 .environmentObject(catalogService)
         }
-        .sheet(item: $pendingShareSheetItem) { item in
-            SystemShareSheet(draft: item) {
-                pendingShareSheetItem = nil
-            }
-        }
     }
 
     private func deleteRecipe() {
@@ -150,13 +143,11 @@ struct RecipeDetailView: View {
 
     @ViewBuilder
     private var toolbarShareButton: some View {
-        Button {
-            presentShareSheet()
-        } label: {
-            Image(systemName: "square.and.arrow.up")
-        }
-        .tint(.primary)
-        .disabled(isPreparingShare)
+        ShareMenuButton(
+            title: recipe.title,
+            card: .make(recipe: recipe),
+            prepare: shareURL
+        )
         .accessibilityLabel(Text("common.share"))
     }
 
@@ -343,24 +334,15 @@ struct RecipeDetailView: View {
     }
 
     private var nutritionFactsCard: some View {
-        EOCard {
-            EOCardTitleRow(title: Text(verbatim: nutritionFactsTitle))
-            EORowSeparator()
-            viewerNutritionRow("addmeal.total.calories", value: nutritionPreview.perServing.calories, unit: NSLocalizedString("diary.kcal", comment: "Kilocalories"))
-            EORowSeparator()
-            viewerNutritionRow("addmeal.total.protein", value: nutritionPreview.perServing.protein, unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
-            EORowSeparator()
-            viewerNutritionRow("addmeal.total.carbs", value: nutritionPreview.perServing.carbs, unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
-            EORowSeparator()
-            viewerNutritionRow("addmeal.total.fat", value: nutritionPreview.perServing.fat, unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle(Text(verbatim: nutritionFactsTitle))
+            NutritionFactsTableCard(
+                leftHeaderTitle: NSLocalizedString("recipe.editor.per_100g", comment: "Per 100g"),
+                rightHeaderTitle: NSLocalizedString("recipe.editor.per_serving", comment: "Per serving"),
+                leftSummary: nutritionPreview.per100g,
+                rightSummary: nutritionPreview.perServing
+            )
         }
-    }
-
-    private func viewerNutritionRow(_ title: LocalizedStringKey, value: Int, unit: String) -> some View {
-        EOListRow(
-            title: Text(title),
-            accessory: .value(Text(verbatim: "\(value) \(unit)"))
-        )
     }
 
     private func sectionTitle(_ key: LocalizedStringKey) -> some View {
@@ -445,26 +427,15 @@ struct RecipeDetailView: View {
         String(format: NSLocalizedString("recipe.grams_value", comment: "Grams value"), value)
     }
 
-    private func shareSheetItem(for payload: FoodSharePayload) -> SystemShareSheetItem? {
-        guard let url = payload.resolvedShareURL else { return nil }
-        return SystemShareSheetItem(message: payload.localizedShareMessage, url: url)
-    }
-
+    /// The link for this thing, made on demand and reused after the first time.
+    ///
+    /// Returns the URL rather than presenting anything: the screen is often a
+    /// sheet, and a sheet cannot raise the share sheet — so the toolbar hands
+    /// this to a `ShareLink` instead.
     @MainActor
-    private func presentShareSheet() {
-        if let payload = sharePayload, let item = shareSheetItem(for: payload) {
-            pendingShareSheetItem = item
-            return
-        }
-        guard !isPreparingShare else { return }
-        isPreparingShare = true
-        Task {
-            await loadSharePayloadIfNeeded()
-            isPreparingShare = false
-            if let payload = sharePayload, let item = shareSheetItem(for: payload) {
-                pendingShareSheetItem = item
-            }
-        }
+    private func shareURL() async -> URL? {
+        await loadSharePayloadIfNeeded()
+        return sharePayload?.resolvedShareURL
     }
 
     @MainActor

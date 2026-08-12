@@ -21,7 +21,6 @@ struct EatometerOnboardingView: View {
     @State private var isHealthAccessEnabled = false
     @State private var isSaving = false
     @State private var stepDirection = 1
-    @State private var outburstProgress: CGFloat = 0
 
     private enum Step: Int, CaseIterable {
         case welcome
@@ -401,77 +400,20 @@ struct EatometerOnboardingView: View {
 
     // MARK: - Step 4 · Finishing
 
-    private struct OutburstIcon: Identifiable {
-        /// Stable id: a fresh UUID on every render would restart the animation.
-        var id: String { systemName }
-        let systemName: String
-        let angle: Double
-        let color: Color
-    }
-
-    private static let outburstIcons: [OutburstIcon] = [
-        OutburstIcon(systemName: "barcode.viewfinder", angle: 270, color: .indigo),
-        OutburstIcon(systemName: "square.and.arrow.up", angle: 210, color: .purple),
-        OutburstIcon(systemName: "leaf", angle: 330, color: .green),
-        OutburstIcon(systemName: "bolt.square", angle: 30, color: .yellow),
-        OutburstIcon(systemName: "heart.text.square", angle: 150, color: .red),
-        OutburstIcon(systemName: "doc.text", angle: 90, color: .mint)
-    ]
-
+    /// One line, centred, and nothing else.
+    ///
+    /// This page used to fire six icons out of the app icon on a staggered
+    /// spring. The burst took longer than the work it was covering, so it read
+    /// as a wait the app had invented rather than as progress — and it played
+    /// again in full even when the profile had already been saved. A sentence
+    /// held just long enough to read says the same thing and gets out of the
+    /// way.
     private var finishingPage: some View {
-        VStack(spacing: 0) {
-            Text("onboarding.new.finishing")
-                .font(EOTheme.Typography.screenTitle)
-                .multilineTextAlignment(.center)
-                .padding(.top, 48)
-
-            Spacer(minLength: 24)
-
-            ZStack {
-                Image("LaunchAppIcon")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 96, height: 96)
-                    .clipShape(RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
-                    .shadow(color: .black.opacity(0.08), radius: 18, y: 8)
-
-                ForEach(Array(Self.outburstIcons.enumerated()), id: \.element.id) { index, icon in
-                    outburstIcon(icon, index: index)
-                }
-            }
-            .frame(height: 300)
-            .onAppear(perform: startOutburst)
-
-            Spacer(minLength: 24)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, EOTheme.Metrics.screenInset)
-    }
-
-    /// Icons shoot out of the app icon and ease to a stop — a spring gives the
-    /// non-linear speed curve, the per-icon delay staggers the burst.
-    private func outburstIcon(_ icon: OutburstIcon, index: Int) -> some View {
-        let radians = icon.angle * .pi / 180
-        let distance = 112 * outburstProgress
-
-        return Image(systemName: icon.systemName)
-            .font(.system(size: 20, weight: .regular))
-            .foregroundStyle(icon.color)
-            .frame(width: 46, height: 46)
-            .background(.regularMaterial, in: Circle())
-            .scaleEffect(0.3 + 0.7 * outburstProgress)
-            .opacity(Double(outburstProgress))
-            .offset(x: cos(radians) * distance, y: sin(radians) * distance)
-            .animation(
-                .spring(response: 0.75, dampingFraction: 0.62)
-                    .delay(Double(index) * 0.07),
-                value: outburstProgress
-            )
-    }
-
-    private func startOutburst() {
-        guard outburstProgress == 0 else { return }
-        outburstProgress = 1
+        Text("onboarding.new.finishing")
+            .font(EOTheme.Typography.screenTitle)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, EOTheme.Metrics.screenInset)
     }
 
     // MARK: - Footer
@@ -502,6 +444,8 @@ struct EatometerOnboardingView: View {
     }
 
     private func saveProfile() async {
+        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+
         appSettings.setWaterTrackingEnabled(true)
         diaryService.setDailyGoal(
             DailyNutritionGoal(
@@ -519,7 +463,13 @@ struct EatometerOnboardingView: View {
             activityLevel: activity.rawValue,
             goal: goal.rawValue
         )
-        try? await Task.sleep(for: .milliseconds(700))
+        // Held to the deadline rather than delayed by a fixed amount: the save
+        // above is a network call, so a flat sleep makes a slow save slower and
+        // still flashes the page past unread when the save is quick. Waiting
+        // until a moment measured from the page appearing gives the same second
+        // on screen either way, and costs nothing when the save already took
+        // longer than that.
+        try? await Task.sleep(until: deadline, clock: .continuous)
         await diaryService.markCalorieOnboardingSeen()
     }
 }

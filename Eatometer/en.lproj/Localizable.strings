@@ -269,7 +269,6 @@
 "settings.app_icon.watermelon" = "Watermelon";
 "settings.notifications.system" = "System notifications";
 "profile.notifications.inbox.title" = "Notifications";
-"settings.haptics.launch" = "Launch haptics";
 "settings.notifications.meal_reminders" = "Meal reminders";
 "push.meal_reminder.title" = "Hey, how about logging your meal? 🍽️";
 "push.meal_reminder.body" = "%@: time to log it!";
@@ -917,7 +916,7 @@
 "onboarding.new.goal" = "What is your goal?";
 "onboarding.new.choose_goal" = "Choose Your Goal";
 "onboarding.new.goal.help" = "After clicking the \"Finish\" button, the recommended meal plan will be set up for you; you can change it at any time in the settings.";
-"onboarding.new.finishing" = "Finishing the dish";
+"onboarding.new.finishing" = "Almost ready";
 "profile.name.help" = "After saving, the new name will be used throughout the platform.";
 "profile.email.help" = "After saving, we will send a confirmation link to the new email address. Notifications will use it after confirmation.";
 "water.settings.daily_plan" = "Daily Plan: %d ml";
@@ -965,7 +964,7 @@
 "profile.notifications.delete" = "Delete Notification";
 "habits.editor.days_remaining_value" = "Days Remaining: %d";
 "today.summary.title" = "Summary";
-"addmeal.macros.hint" = "The step of change macros is 1 g, for calorie this value is 10 cal. After finish typing tap Save to apply your changes.";
+"addmeal.macros.hint" = "Type the values or use the buttons: they move macros by 1 g and calories by 10.";
 "common.clear" = "Clear";
 "habits.detail.time_elapsed" = "Time Elapsed:";
 "habits.detail.time_remaining" = "Time Remaining:";
@@ -980,7 +979,6 @@
 "settings.app_icon.unsupported" = "This device does not support alternate app icons.";
 "addmeal.set_portion" = "Set Portion";
 "water.was_removed" = "Was Removed";
-"water.new_value" = "New Value";
 "water.adjust.hint" = "Use minus to take water back if you logged it by mistake.";
 "water.quick_add" = "Add %d ml";
 "water.quick_remove" = "Remove %d ml";
@@ -1009,3 +1007,45 @@
 "recipe.editor.save_error_title" = "Could not save the recipe";
 "settings.listsort.title" = "Sorting";
 "today.stats.macros.title" = "Macros";
+
+/* Habit icon names */
+"habits.icon.leaf" = "Leaf";
+"habits.icon.drop" = "Water";
+"habits.icon.flame" = "Streak";
+"habits.icon.bolt" = "Energy";
+"habits.icon.heart" = "Health";
+"habits.icon.walk" = "Walking";
+"habits.icon.run" = "Running";
+"habits.icon.workout" = "Workout";
+"habits.icon.meal" = "Meal";
+"habits.icon.drink" = "Coffee";
+"habits.icon.vegetables" = "Vegetables";
+"habits.icon.takeaway" = "Takeaway";
+"habits.icon.sleep" = "Sleep";
+"habits.icon.bed" = "Bedtime";
+"habits.icon.alarm" = "Alarm";
+"habits.icon.morning" = "Morning";
+"habits.icon.avoid" = "Avoid";
+"habits.icon.less" = "Cut down";
+"habits.icon.done" = "Done";
+"habits.icon.star" = "Star";
+"habits.icon.reading" = "Reading";
+"habits.icon.mind" = "Mind";
+"habits.icon.music" = "Music";
+"habits.icon.headphones" = "Headphones";
+
+/* Share card */
+"share.card.composition" = "Contents";
+"share.card.more_items" = "and %d more";
+"share.card.total" = "In total";
+"share.card.per_serving" = "Per serving";
+"share.card.per_100g" = "Per 100 g";
+"share.card.servings" = "%d servings";
+"share.card.footer" = "Tracked in Eatometer";
+"share.card.kind.recipe" = "Recipe";
+"share.card.kind.product" = "Product";
+"share.card.kind.meal" = "Meal";
+"share.card.kind.meal_plan" = "Meal plan";
+"share.card.servings_value" = "%@ servings";
+"share.action.link" = "Share link";
+"share.action.card" = "Share card";

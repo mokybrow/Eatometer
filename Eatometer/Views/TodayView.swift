@@ -157,8 +157,13 @@ struct TodayView: View {
                 MealEntryViewerSheet(
                     title: viewer.meal.title,
                     items: viewer.meal.items,
-                    nutrition: viewer.meal.nutrition,
-                    onShare: { shareMeal(viewer.meal) }
+                    nutrition: NutritionSummary(
+                        calories: viewer.meal.calories,
+                        protein: viewer.meal.protein,
+                        fat: viewer.meal.fat,
+                        carbs: viewer.meal.carbs
+                    ),
+                    prepareShare: { await shareURL(for: viewer.meal) }
                 )
                 .environmentObject(catalogService)
             }
@@ -477,13 +482,41 @@ struct TodayView: View {
         shareMeal(meal)
     }
 
+    /// The link for a meal, made on demand.
+    ///
+    /// Separate from `shareMeal` because the viewer needs the URL itself for a
+    /// `ShareLink`, while the diary's context menu — which is not inside a sheet
+    /// — can still raise the share sheet the old way.
+    @MainActor
+    private func shareURL(for meal: MealEntry) async -> URL? {
+        await diaryService.shareMeal(id: meal.id)?.resolvedShareURL
+    }
+
+    @MainActor
     private func shareMeal(_ meal: MealEntry) {
         Task {
             guard let payload = await diaryService.shareMeal(id: meal.id),
                   let link = payload.resolvedShareLink else { return }
 
             if let url = payload.resolvedShareURL {
-                pendingShareSheetItem = SystemShareSheetItem(message: payload.localizedShareMessage, url: url)
+                pendingShareSheetItem = SystemShareSheetItem(
+                    message: payload.localizedShareMessage,
+                    url: url,
+                    card: .make(
+                        title: meal.title,
+                        kindKey: "share.card.kind.meal",
+                        items: meal.items,
+                        // Accessors, not the stored field: it is zero whenever
+                        // the totals never came back, and they fall back to
+                        // summing the items.
+                        nutrition: NutritionSummary(
+                            calories: meal.calories,
+                            protein: meal.protein,
+                            fat: meal.fat,
+                            carbs: meal.carbs
+                        )
+                    )
+                )
             } else {
                 pendingShareSheetItem = SystemShareSheetItem(message: payload.localizedShareMessage, text: link)
             }

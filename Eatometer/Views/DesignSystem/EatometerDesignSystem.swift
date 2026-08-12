@@ -447,6 +447,174 @@ struct EOStepperRow: View {
     }
 }
 
+/// A stepper row whose value can also be typed.
+///
+/// `−  |  +` is right for a nudge and hopeless for a figure read off a packet:
+/// reaching 1 850 kcal in steps of ten is 185 taps. The number sits in a field
+/// on the same row, so the buttons keep the small corrections and the keypad
+/// takes everything else.
+struct EOStepperFieldRow: View {
+    private let title: Text
+    private let subtitle: Text?
+    private let range: ClosedRange<Int>
+    private let step: Int
+    @Binding private var value: Int
+
+    /// What the field holds, which is not the value. On the way to "1850" the
+    /// field passes through "" and "18"; writing those back would clamp and
+    /// rewrite the number under the cursor as it is being typed.
+    @State private var draft = ""
+    @FocusState private var isEditing: Bool
+
+    /// A zero is shown as a prompt rather than as content.
+    ///
+    /// Grey "0" says the field is empty and waiting; a black "0" says someone
+    /// decided on none — and worse, it has to be selected and deleted before a
+    /// real figure can be typed over it.
+    private var placeholder: Text {
+        Text(verbatim: "0").foregroundStyle(.secondary)
+    }
+
+    /// An idle row holding nothing shows the prompt rather than a typed "0".
+    ///
+    /// Keyed on the value, not on the text. A row whose floor is above zero —
+    /// calories, say — is never empty and so never shows the prompt, which is
+    /// right: "0" would be a figure it cannot hold.
+    private var displayedDraft: String {
+        !isEditing && value == 0 ? "" : draft
+    }
+
+    init(
+        title: Text,
+        subtitle: Text? = nil,
+        value: Binding<Int>,
+        range: ClosedRange<Int>,
+        step: Int
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self._value = value
+        self.range = range
+        self.step = max(1, step)
+    }
+
+    /// "Protein, g" — the unit named once, in the label.
+    ///
+    /// It used to sit after the number, which made every field a different
+    /// width: a column of them read "20 g", "1 850", "45 %", with the digits
+    /// stepping left and right down the card. Moving the unit into the label
+    /// leaves the numbers to line up under one another and still says what they
+    /// are.
+    static func title(_ name: String, unit: String) -> String {
+        unit.isEmpty ? name : "\(name), \(unit)"
+    }
+
+    var body: some View {
+        EOListRow(title: title, subtitle: subtitle) {
+            HStack(spacing: 10) {
+                TextField("", text: draftBinding, prompt: placeholder)
+                    // A plain number pad has no minus, which would leave a
+                    // negative value unreachable by typing — so the row asks for
+                    // one only when its range actually goes below zero.
+                    .keyboardType(range.lowerBound < 0 ? .numbersAndPunctuation : .numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(EOTheme.Typography.rowValue.monospacedDigit())
+                    .focused($isEditing)
+                    .frame(maxWidth: 96, alignment: .trailing)
+                    // The visible label is the row's title, which the field
+                    // itself does not carry.
+                    .accessibilityLabel(title)
+
+                EOStepperControl(
+                    canDecrement: value > range.lowerBound,
+                    canIncrement: value < range.upperBound,
+                    onDecrement: { commitEditing(); apply(-step) },
+                    onIncrement: { commitEditing(); apply(step) }
+                )
+            }
+        }
+        .onAppear { draft = String(value) }
+        .onChange(of: value) { _, newValue in
+            // While the field has focus it is the source of truth; the rest of
+            // the time it follows the value.
+            if !isEditing { draft = String(newValue) }
+        }
+        .onChange(of: draft) { _, typed in
+            // Written through on every keystroke rather than only when the field
+            // gives up focus. A sheet's Save button lives outside the keyboard
+            // and does not resign it first, and there is no Done key above the
+            // pad to force the issue — so a number still being typed has to
+            // already be the value, or the save drops it.
+            //
+            // The two ends are not symmetrical. Past the ceiling is settled — no
+            // further digit brings a number back down — so it is held there at
+            // once. Below the floor may still be on its way up: on the road to
+            // 1 850 the field passes through 1 and 18, and a row starting at 500
+            // that snapped each of those up would be writing figures nobody
+            // typed and fighting the next keystroke. Those wait for the edit to
+            // end, where `commitEditing` settles them.
+            guard isEditing, let parsed = parsedDraft(typed) else { return }
+            if parsed > range.upperBound {
+                value = range.upperBound
+            } else if parsed >= range.lowerBound {
+                value = parsed
+            }
+        }
+        .onChange(of: isEditing) { _, editing in
+            // Focusing a zero starts on an empty field: the prompt already said
+            // zero, and the first digit typed should be the number rather than
+            // the second digit of "0…".
+            if editing {
+                draft = value == 0 ? "" : String(value)
+            } else {
+                commitEditing()
+            }
+        }
+    }
+
+    /// Hides a zero behind the prompt while the field is idle, and hands typing
+    /// straight through while it is not.
+    private var draftBinding: Binding<String> {
+        Binding(get: { displayedDraft }, set: { draft = $0 })
+    }
+
+    /// Steps the value and shows it. The field is written to explicitly because
+    /// tapping a button does not take focus away from a text field, so the sync
+    /// that runs on losing focus would not have run.
+    private func apply(_ delta: Int) {
+        value = clamped(value + delta)
+        draft = String(value)
+    }
+
+    /// Reads the field back into the value, clamped to the range.
+    ///
+    /// Something unreadable — or nothing at all — falls back to the value rather
+    /// than to zero: clearing the field to retype it is not the same as asking
+    /// for none.
+    private func commitEditing() {
+        value = clamped(parsedDraft(draft) ?? value)
+        draft = String(value)
+    }
+
+    private func clamped(_ candidate: Int) -> Int {
+        min(max(candidate, range.lowerBound), range.upperBound)
+    }
+
+    /// ASCII digits, with a single leading minus where the range allows one.
+    ///
+    /// `Character.isNumber` is also true of "٣" and "½", and a minus in the
+    /// middle is not a number either — in both cases `Int` returns nil and the
+    /// edit would quietly revert to the previous figure.
+    private func parsedDraft(_ text: String) -> Int? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        let isNegative = range.lowerBound < 0
+            && (trimmed.hasPrefix("-") || trimmed.hasPrefix("\u{2212}"))
+        let digits = trimmed.filter { $0.isASCII && $0.isNumber }
+        guard let magnitude = Int(digits) else { return nil }
+        return isNegative ? -magnitude : magnitude
+    }
+}
+
 /// The standalone `−  |  +` capsule control.
 struct EOStepperControl: View {
     var canDecrement: Bool = true
@@ -631,7 +799,7 @@ struct EOCardTitleRow: View {
 
 // MARK: - Segmented picker
 
-/// Capsule segmented control (Products / Meals / Recipes).
+/// Segmented control (Products / Meals / Recipes).
 struct EOSegmentedPicker<Value: Hashable>: View {
     struct Segment: Identifiable {
         let id: Value
@@ -646,38 +814,28 @@ struct EOSegmentedPicker<Value: Hashable>: View {
     @Binding var selection: Value
     let segments: [Segment]
 
-    @Namespace private var indicatorNamespace
-
+    /// The platform control, not a drawing of one.
+    ///
+    /// This was a row of buttons with a capsule slid between them by
+    /// `matchedGeometryEffect`. It looked close enough standing still and was
+    /// wrong the moment it was touched: the system control can be dragged —
+    /// press the selection and scrub along the track, and it follows the finger
+    /// and settles under it — which a row of buttons cannot do, because a button
+    /// only knows it was tapped. It also missed the material, the selection
+    /// haptic, the pressed state, and the way the control reflows under larger
+    /// text.
+    ///
+    /// Reproducing all of that is a rewrite of something the platform ships and
+    /// keeps changing. Wrapping it costs the custom shadow, which is the one
+    /// thing here worth losing.
     var body: some View {
-        HStack(spacing: 0) {
+        Picker("", selection: $selection) {
             ForEach(segments) { segment in
-                Button {
-                    guard selection != segment.id else { return }
-                    withAnimation(.snappy(duration: 0.24)) {
-                        selection = segment.id
-                    }
-                } label: {
-                    segment.title
-                        .font(.subheadline.weight(selection == segment.id ? .semibold : .regular))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background {
-                            if selection == segment.id {
-                                Capsule(style: .continuous)
-                                    .fill(EOTheme.Palette.card)
-                                    .shadow(color: .black.opacity(0.08), radius: 5, y: 1)
-                                    .matchedGeometryEffect(id: "eo-segment", in: indicatorNamespace)
-                            }
-                        }
-                        .contentShape(Capsule(style: .continuous))
-                }
-                .buttonStyle(.plain)
+                segment.title.tag(segment.id)
             }
         }
-        .padding(3)
-        .background(EOTheme.Palette.controlFill, in: Capsule(style: .continuous))
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 }
 
@@ -849,6 +1007,32 @@ extension View {
         onClose: @escaping () -> Void
     ) -> some View {
         eoSheetChrome(title: Text(titleKey), trailing: trailing, onClose: onClose)
+    }
+
+    /// Sheet chrome whose trailing control is drawn by the caller.
+    ///
+    /// For the times that control is not a button — a `Menu`, a `ShareLink` —
+    /// which `EOSheetHeaderTrailing` cannot express and which must not be faked
+    /// with a button that raises another sheet: SwiftUI presents one sheet at a
+    /// time, so a share sheet asked for from inside a sheet is simply dropped
+    /// with "only presenting a single sheet is supported" in the log.
+    func eoSheetChrome<Trailing: View>(
+        title: Text,
+        onClose: @escaping () -> Void,
+        @ViewBuilder trailing: @escaping () -> Trailing
+    ) -> some View {
+        navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close, action: onClose)
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    trailing()
+                }
+            }
+            .tint(.primary)
     }
 }
 

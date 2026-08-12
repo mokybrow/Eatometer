@@ -21,6 +21,7 @@ struct AddMealSheetView: View {
     @State private var pendingShareSheetItem: SystemShareSheetItem?
     @State private var isPreparingShare = false
 
+    @MainActor
     private var resolvedShareSheetItem: SystemShareSheetItem? {
         guard let sharePayload else { return nil }
         return shareSheetItem(for: sharePayload)
@@ -137,6 +138,10 @@ struct AddMealSheetView: View {
 
     private var gramsUnitText: String {
         NSLocalizedString("unit.grams.short", comment: "Grams unit short title")
+    }
+
+    private var kcalUnitText: String {
+        NSLocalizedString("diary.kcal", comment: "Calories unit short title")
     }
 
     private var libraryPickerTitle: String {
@@ -357,7 +362,7 @@ struct AddMealSheetView: View {
             EORowSeparator()
             nutritionStepper(
                 title: NSLocalizedString("addmeal.total.calories", comment: "Calories"),
-                unit: "",
+                unit: kcalUnitText,
                 value: manualNutritionBinding(\.caloriesPer100g),
                 step: 10
             )
@@ -379,18 +384,19 @@ struct AddMealSheetView: View {
         }
     }
 
-    /// Mock-up row: "Calorie: 450" on the left, `−  |  +` capsule on the right.
+    /// Mock-up row: "Protein, g" on the left, then the value and the `−  |  +`
+    /// capsule.
+    ///
+    /// The value used to be baked into the title, which made it read-only — the
+    /// steppers were the only way to reach a number, and 450 kcal in tens is
+    /// forty-five taps. It is a field now, so it can simply be typed, and the
+    /// unit has moved into the label so the four numbers line up.
     private func nutritionStepper(title: String, unit: String, value: Binding<Int>, step: Int) -> some View {
-        let label = unit.isEmpty
-            ? "\(title): \(value.wrappedValue)"
-            : "\(title): \(value.wrappedValue) \(unit)"
-
-        return EOStepperRow(
-            title: Text(verbatim: label),
-            canDecrement: value.wrappedValue > 0,
-            canIncrement: value.wrappedValue + step <= 100_000,
-            onDecrement: { value.wrappedValue = max(0, value.wrappedValue - step) },
-            onIncrement: { value.wrappedValue = min(100_000, value.wrappedValue + step) }
+        EOStepperFieldRow(
+            title: Text(verbatim: EOStepperFieldRow.title(title, unit: unit)),
+            value: value,
+            range: 0...100_000,
+            step: step
         )
     }
 
@@ -744,16 +750,13 @@ struct AddMealSheetView: View {
             let didRemoveMergedSources = await removeMergedSourceMealsIfNeeded(afterSaving: mealToSave, didSave: didSave)
 
             if didSave {
-                // Only the delta over what was already logged goes to Health,
-                // since HealthKit samples are additive.
-                let previous = normalizedInitialDraft
-                await diaryService.exportNutritionToHealthIfEnabled(
-                    calories: max(0, mealToSave.calories - previous.calories),
-                    protein: max(0, mealToSave.protein - previous.protein),
-                    carbs: max(0, mealToSave.carbs - previous.carbs),
-                    fat: max(0, mealToSave.fat - previous.fat),
-                    date: mealToSave.scheduledAt
-                )
+                // The whole day is restated rather than the difference added.
+                // Sending only the increase meant an edit that lowered a meal
+                // never reached Health, and a meal moved to another day was
+                // counted on both.
+                // The day the meal is on now. The day it came from, if it moved,
+                // is the store's business — `detachMeal` mirrors that one.
+                await diaryService.syncNutritionToHealthIfEnabled(for: mealToSave.scheduledAt)
             }
 
             await MainActor.run {
@@ -901,6 +904,7 @@ struct AddMealSheetView: View {
         sharePayload = payload
     }
 
+    @MainActor
     private func shareSheetItem(for payload: FoodSharePayload) -> SystemShareSheetItem {
         let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? payload.title
@@ -931,8 +935,19 @@ struct AddMealSheetView: View {
             .joined(separator: "\n")
         let link = payload.resolvedShareLink ?? payload.shareCode
         if let url = URL(string: link), url.scheme != nil {
-            return SystemShareSheetItem(message: caption, url: url)
+            return SystemShareSheetItem(
+                message: caption,
+                url: url,
+                card: .make(
+                    title: title,
+                    kindKey: "share.card.kind.meal",
+                    items: normalizedDraft.items,
+                    nutrition: normalizedDraft.nutrition
+                )
+            )
         }
+        // No card without a link: the picture is only half the message, and half
+        // a message is worse than a code the reader can paste.
         return SystemShareSheetItem(message: caption, text: link)
     }
 
