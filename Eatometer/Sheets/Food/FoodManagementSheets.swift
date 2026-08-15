@@ -202,7 +202,9 @@ struct FoodCatalogLookupSheet: View {
     /// Excludes anything already listed under "My products" to avoid duplicates.
     private var frequentProducts: [ProductSummary] {
         let localIDs = Set(localProducts.map(\.id))
-        return frequentStore.products.filter { !localIDs.contains($0.id) }
+        return frequentStore.products.filter {
+            !localIDs.contains($0.id) && catalogService.productSummary(id: $0.id) != nil
+        }
     }
 
     private var frequentProductsSectionTitle: String {
@@ -2062,8 +2064,8 @@ struct FoodShareSheet: View {
         payload.isRecipeShare
     }
 
-    private var resolvedShareURL: String {
-        payload.resolvedShareLink ?? payload.shareCode
+    private var resolvedShareURL: String? {
+        payload.resolvedShareLink
     }
 
     private var previewShareURL: URL? {
@@ -2102,29 +2104,33 @@ struct FoodShareSheet: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("meal.share.link")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text(resolvedShareURL)
-                        .font(.footnote)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
-                        .background(Color.platformSecondarySystemBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
+                if let resolvedShareURL {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("meal.share.link")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(resolvedShareURL)
+                            .font(.footnote)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16)
+                            .background(Color.platformSecondarySystemBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
+                    }
                 }
 
                 HStack(spacing: 12) {
-                    Button("common.copy") {
-                        PlatformSupport.copyToClipboard(resolvedShareURL)
+                    if let resolvedShareURL {
+                        Button("common.copy") {
+                            PlatformSupport.copyToClipboard(resolvedShareURL)
+                        }
+                        .buttonStyle(.bordered)
                     }
-                    .buttonStyle(.bordered)
 
                     // A ShareLink, not a button raising a share sheet: this
                     // view is itself a sheet, and SwiftUI presents one at a
                     // time — the second was dropped and nothing happened.
                     if let previewShareURL {
-                        ShareLink(item: previewShareURL, subject: Text(payload.title.isEmpty ? "" : payload.title)) {
+                        ShareLink(item: previewShareURL, subject: Text(verbatim: "")) {
                             Label("common.share", systemImage: "square.and.arrow.up")
                                 .font(.body.weight(.semibold))
                                 .padding(.horizontal, 18)
@@ -3196,6 +3202,8 @@ private struct ProductServingOptionEditorSheet: View {
     let onDelete: (() -> Void)?
 
     @State private var option: ProductServingOption
+    @State private var metricAmountText: String
+    @FocusState private var isMetricAmountFocused: Bool
 
     init(
         option: ProductServingOption,
@@ -3207,9 +3215,10 @@ private struct ProductServingOptionEditorSheet: View {
         var normalized = option
         normalized.amount = 1
         normalized.unit = .serving
-        normalized.metricAmount = max(option.metricAmount, 1)
+        normalized.metricAmount = max(option.metricAmount, 0)
         normalized.metricUnit = baseUnit
         _option = State(initialValue: normalized)
+        _metricAmountText = State(initialValue: option.metricAmount > 0 ? formatFoodAmount(option.metricAmount) : "")
         self.baseUnit = baseUnit
         self.onSave = onSave
         self.onCancel = onCancel
@@ -3227,15 +3236,36 @@ private struct ProductServingOptionEditorSheet: View {
                     EOTextFieldRow("product.editor.serving_option.label", text: $option.label)
                     EORowSeparator()
 
-                    EOStepperRow(
-                        title: Text(
-                            verbatim: "\(NSLocalizedString("addmeal.amount", comment: "Amount")): \(formatFoodAmount(option.metricAmount)) \(baseUnit.shortTitle)"
-                        ),
-                        canDecrement: option.metricAmount > 1,
-                        canIncrement: option.metricAmount < 10_000,
-                        onDecrement: { option.metricAmount = max(1, option.metricAmount - 1) },
-                        onIncrement: { option.metricAmount = min(10_000, option.metricAmount + 1) }
-                    )
+                    EOListRow(title: Text("addmeal.amount")) {
+                        HStack(spacing: 10) {
+                            TextField(
+                                "",
+                                text: $metricAmountText,
+                                prompt: Text("0").foregroundStyle(.secondary)
+                            )
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($isMetricAmountFocused)
+                            .frame(maxWidth: 96, alignment: .trailing)
+                            .font(EOTheme.Typography.rowValue.monospacedDigit())
+                            .onChange(of: metricAmountText) { _, newValue in
+                                metricAmountText = sanitizedDecimalText(newValue)
+                            }
+
+                            EOStepperControl(
+                                canDecrement: option.metricAmount > 1,
+                                canIncrement: option.metricAmount < 10_000,
+                                onDecrement: {
+                                    option.metricAmount = max(1, option.metricAmount - 1)
+                                    syncMetricAmountText()
+                                },
+                                onIncrement: {
+                                    option.metricAmount = min(10_000, option.metricAmount + 1)
+                                    syncMetricAmountText()
+                                }
+                            )
+                        }
+                    }
                 }
 
                 if onDelete != nil {
@@ -3255,13 +3285,82 @@ private struct ProductServingOptionEditorSheet: View {
             .eoSheetChrome(
                 "product.editor.section.serving",
                 trailing: .confirm(isEnabled: !trimmedLabel.isEmpty) {
-                    onSave(option)
+                    commitMetricAmountText()
+                    var resolved = option
+                    resolved.metricAmount = max(resolved.metricAmount, 1)
+                    onSave(resolved)
                 },
                 onClose: onCancel
             )
         }
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
+        .onAppear {
+            syncMetricAmountText()
+        }
+        .onChange(of: option.metricAmount) { _, _ in
+            guard !isMetricAmountFocused else { return }
+            syncMetricAmountText()
+        }
+        .onChange(of: isMetricAmountFocused) { _, isFocused in
+            if isFocused {
+                syncMetricAmountText()
+            } else {
+                commitMetricAmountText()
+            }
+        }
+    }
+
+    private func syncMetricAmountText() {
+        metricAmountText = option.metricAmount > 0 ? formatFoodAmount(option.metricAmount) : ""
+    }
+
+    private func commitMetricAmountText() {
+        let parsed = resolvedDoubleValue(from: metricAmountText)
+        option.metricAmount = min(10_000, max(0, parsed))
+        syncMetricAmountText()
+    }
+
+    private func sanitizedDecimalText(_ text: String) -> String {
+        let decimalSeparator = Locale.current.decimalSeparator ?? "."
+        let alternateSeparator = decimalSeparator == "," ? "." : ","
+
+        var result = ""
+        var hasSeparator = false
+        for character in text {
+            if character.isNumber {
+                result.append(character)
+                continue
+            }
+
+            let scalar = String(character)
+            if scalar == decimalSeparator || scalar == alternateSeparator {
+                guard !hasSeparator else { continue }
+                hasSeparator = true
+                result.append(decimalSeparator)
+            }
+        }
+
+        return result
+    }
+
+    private func resolvedDoubleValue(from text: String) -> Double {
+        let sanitized = sanitizedDecimalText(text)
+        guard !sanitized.isEmpty else { return 0 }
+
+        let formatter = NumberFormatter()
+        formatter.locale = .current
+        formatter.numberStyle = .decimal
+        if let number = formatter.number(from: sanitized) {
+            return number.doubleValue
+        }
+
+        let decimalSeparator = Locale.current.decimalSeparator ?? "."
+        let normalized = sanitized.replacingOccurrences(of: decimalSeparator, with: ".")
+        if normalized.hasPrefix(".") {
+            return Double("0\(normalized)") ?? 0
+        }
+        return Double(normalized) ?? 0
     }
 }
 
@@ -3780,6 +3879,7 @@ struct RecipeIngredientQuantityEditorSheet: View {
     let onConfirm: (() -> Void)?
     let onClose: () -> Void
     let usesOwnNavigationContainer: Bool
+    @State private var amountDraftText = ""
     @FocusState private var isAmountFieldFocused: Bool
 
     init(
@@ -3832,16 +3932,6 @@ struct RecipeIngredientQuantityEditorSheet: View {
     private var resolvedName: String {
         let name = catalogService.resolvedName(for: ingredient).trimmingCharacters(in: .whitespacesAndNewlines)
         return name.isEmpty ? NSLocalizedString("recipe.editor.new_ingredient", comment: "New ingredient") : name
-    }
-
-    private var sourceDescription: String {
-        if ingredient.productID != nil {
-            return NSLocalizedString("products.title", comment: "Product")
-        }
-        if ingredient.nestedRecipeID != nil {
-            return NSLocalizedString("recipes.title", comment: "Recipe")
-        }
-        return NSLocalizedString("recipe.editor.not_selected", comment: "Not selected")
     }
 
     /// Human-readable label of the unit currently selected in the menu.
@@ -3905,16 +3995,6 @@ struct RecipeIngredientQuantityEditorSheet: View {
         onDelete == nil ? 390 : 450
     }
 
-    private var quantitySummaryText: String {
-        let amount = displayFoodQuantityText(
-            amount: ingredient.amount,
-            unit: ingredient.unit,
-            servingLabel: ingredient.servingLabel,
-            product: linkedProduct
-        )
-        return "\(amount) · \(sourceDescription)"
-    }
-
     private var unitPickerTag: String {
         if linkedProduct != nil {
             if let option = selectedServingOption {
@@ -3950,18 +4030,6 @@ struct RecipeIngredientQuantityEditorSheet: View {
                         selectRecipeUnit(unit, recipe: recipe)
                     }
                 }
-            }
-        )
-    }
-
-    private var amountTextBinding: Binding<String> {
-        Binding(
-            get: {
-                amountText(for: displayAmount)
-            },
-            set: { newValue in
-                let normalized = newValue.replacingOccurrences(of: ",", with: ".")
-                applyAmount(Double(normalized) ?? minimumDisplayAmount)
             }
         )
     }
@@ -4007,12 +4075,30 @@ struct RecipeIngredientQuantityEditorSheet: View {
                     }
                     EORowSeparator()
 
-                    EOStepperRow(
-                        title: Text(verbatim: formatFoodAmount(displayAmount)),
-                        canDecrement: canDecrease,
-                        onDecrement: { adjustAmount(by: -amountStep(for: resolvedUnit)) },
-                        onIncrement: { adjustAmount(by: amountStep(for: resolvedUnit)) }
-                    )
+                    EOListRow(title: Text("addmeal.amount")) {
+                        HStack(spacing: 10) {
+                            TextField(
+                                "",
+                                text: $amountDraftText,
+                                prompt: Text("addmeal.amount.placeholder").foregroundStyle(.secondary)
+                            )
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($isAmountFieldFocused)
+                            .frame(maxWidth: 96, alignment: .trailing)
+                            .font(EOTheme.Typography.rowValue.monospacedDigit())
+                            .onChange(of: amountDraftText) { _, newValue in
+                                amountDraftText = sanitizedDecimalText(newValue)
+                            }
+
+                            EOStepperControl(
+                                canDecrement: canDecrease,
+                                canIncrement: true,
+                                onDecrement: { adjustAmount(by: -amountStep(for: resolvedUnit)) },
+                                onIncrement: { adjustAmount(by: amountStep(for: resolvedUnit)) }
+                            )
+                        }
+                    }
                 }
 
                 if onDelete != nil {
@@ -4024,11 +4110,6 @@ struct RecipeIngredientQuantityEditorSheet: View {
                         }
                     }
                 }
-
-                Text(quantitySummaryText)
-                    .font(EOTheme.Typography.footnote)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, EOTheme.Metrics.cardInset)
 
                 Spacer(minLength: 0)
             }
@@ -4057,6 +4138,18 @@ struct RecipeIngredientQuantityEditorSheet: View {
             )
             .onAppear {
                 normalizeDefaultMetricUnitIfNeeded()
+                syncAmountDraftText()
+            }
+            .onChange(of: displayAmount) { _, _ in
+                guard !isAmountFieldFocused else { return }
+                syncAmountDraftText()
+            }
+            .onChange(of: isAmountFieldFocused) { _, isFocused in
+                if isFocused {
+                    syncAmountDraftText()
+                } else {
+                    commitAmountDraftText()
+                }
             }
     }
 
@@ -4100,6 +4193,15 @@ struct RecipeIngredientQuantityEditorSheet: View {
 
     private func dismissKeyboard() {
         isAmountFieldFocused = false
+    }
+
+    private func syncAmountDraftText() {
+        amountDraftText = amountText(for: displayAmount)
+    }
+
+    private func commitAmountDraftText() {
+        let parsedAmount = resolvedDoubleValue(from: amountDraftText)
+        applyAmount(parsedAmount > 0 ? parsedAmount : minimumDisplayAmount)
     }
 
     private func applyAmount(_ nextDisplayAmount: Double) {
@@ -4188,6 +4290,48 @@ struct RecipeIngredientQuantityEditorSheet: View {
         ingredient.unit = fallbackUnit
         ingredient.amount = max(minimumAmount(for: fallbackUnit), defaultAmount(for: fallbackUnit))
     }
+
+    private func sanitizedDecimalText(_ text: String) -> String {
+        let decimalSeparator = Locale.current.decimalSeparator ?? "."
+        let alternateSeparator = decimalSeparator == "," ? "." : ","
+
+        var result = ""
+        var hasSeparator = false
+        for character in text {
+            if character.isNumber {
+                result.append(character)
+                continue
+            }
+
+            let scalar = String(character)
+            if scalar == decimalSeparator || scalar == alternateSeparator {
+                guard !hasSeparator else { continue }
+                hasSeparator = true
+                result.append(decimalSeparator)
+            }
+        }
+
+        return result
+    }
+
+    private func resolvedDoubleValue(from text: String) -> Double {
+        let sanitized = sanitizedDecimalText(text)
+        guard !sanitized.isEmpty else { return 0 }
+
+        let formatter = NumberFormatter()
+        formatter.locale = .current
+        formatter.numberStyle = .decimal
+        if let number = formatter.number(from: sanitized) {
+            return number.doubleValue
+        }
+
+        let decimalSeparator = Locale.current.decimalSeparator ?? "."
+        let normalized = sanitized.replacingOccurrences(of: decimalSeparator, with: ".")
+        if normalized.hasPrefix(".") {
+            return Double("0\(normalized)") ?? 0
+        }
+        return Double(normalized) ?? 0
+    }
 }
 
 struct SharedRecipeImportConfirmationSheet: View {
@@ -4241,12 +4385,9 @@ struct SharedRecipeImportConfirmationSheet: View {
                 Text(errorMessage ?? "")
             }
             .toolbar {
-                ToolbarItem(placement: .platformTopBarLeading) {
-                    PressableIconButton(action: { dismiss() }) {
-                        Label("common.close", systemImage: "xmark")
-                            .labelStyle(.iconOnly)
-                            .frame(width: 48, height: 48)
-                    }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(role: .close) { dismiss() }
+                        .tint(.primary)
                 }
             }
         }
@@ -4267,117 +4408,108 @@ struct SharedRecipeImportConfirmationSheet: View {
     private func recipeContent(_ recipe: RecipeSummary) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
-                if RecipeCategory(rawString: recipe.category) != .none {
-                    HStack(spacing: 6) {
-                        Text(RecipeCategory(rawString: recipe.category).title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(Color.appCardBackground, in: Capsule())
-                    }
-                }
-
-                if !recipe.details.isEmpty {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(recipe.details)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(18)
-                    .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
-                }
-
-                if !recipe.ingredients.isEmpty {
-                    recipeIngredientsSection(recipe)
-                }
-
-                if !recipe.steps.isEmpty {
-                    recipeStepsSection(recipe)
-                }
-
+                recipeIdentityCard(recipe)
+                recipeIngredientsCard(recipe)
                 recipeNutritionSection(recipe)
 
                 statusSection
 
                 importButtonSection
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
+            .eoCardInsets()
+            .padding(.top, 12)
             .padding(.bottom, 24)
         }
     }
 
-    private func recipeIngredientsSection(_ recipe: RecipeSummary) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            importSectionTitle("recipe.editor.section.ingredients")
-
-            VStack(spacing: 0) {
-                ForEach(Array(recipe.ingredients.enumerated()), id: \.element.id) { index, ingredient in
-                    importIngredientRow(ingredient)
-
-                    if index < recipe.ingredients.count - 1 {
-                        importDivider
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
+    private func recipeIdentityCard(_ recipe: RecipeSummary) -> some View {
+        EOCard {
+            EOListRow(title: Text(verbatim: recipe.title))
+            EORowSeparator()
+            EOListRow(
+                title: Text("recipe.editor.servings"),
+                accessory: .value(Text(verbatim: String(max(recipe.servings, 1))))
+            )
         }
     }
 
-    private func recipeStepsSection(_ recipe: RecipeSummary) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            importSectionTitle("recipe.editor.section.steps")
+    private func recipeIngredientsCard(_ recipe: RecipeSummary) -> some View {
+        EOCard {
+            EOCardTitleRow("recipe.editor.section.ingredients")
 
-            VStack(spacing: 0) {
-                ForEach(Array(recipe.steps.enumerated()), id: \.offset) { index, step in
-                    HStack(alignment: .top, spacing: 12) {
-                        Text("\(index + 1).")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28, alignment: .leading)
-
-                        Text(step.trimmingCharacters(in: .whitespacesAndNewlines))
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    if index < recipe.steps.count - 1 {
-                        importDivider
-                            .padding(.vertical, 8)
-                    }
+            if recipe.ingredients.isEmpty {
+                EORowSeparator()
+                EOListRow("recipe.detail.ingredients.empty", titleColor: .secondary)
+            } else {
+                ForEach(recipe.ingredients) { ingredient in
+                    EORowSeparator()
+                    EOListRow(
+                        title: Text(verbatim: importIngredientName(for: ingredient)),
+                        subtitle: Text(verbatim: importIngredientMeta(for: ingredient))
+                    )
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
         }
     }
 
     private func recipeNutritionSection(_ recipe: RecipeSummary) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            importSectionTitle("recipe.detail.nutrition")
-
-            NutritionFactsTableCard(
-                leftHeaderTitle: NSLocalizedString("recipe.editor.per_100g", comment: "Per 100g"),
-                rightHeaderTitle: NSLocalizedString("recipe.editor.per_serving", comment: "Per serving"),
-                leftSummary: recipe.resolvedNutritionPer100g,
-                rightSummary: recipe.nutritionPerServing,
-                footnote: String(
-                    format: "%@: %d",
-                    NSLocalizedString("recipe.editor.servings", comment: "Servings title"),
-                    recipe.servings
+        EOCard {
+            EOCardTitleRow(title: Text(verbatim: importNutritionFactsTitle))
+            EORowSeparator()
+            importRecipeNutritionRow(
+                title: NSLocalizedString("addmeal.total.calories", comment: "Calories"),
+                value: "\(importRecipeNutritionSummary(for: recipe).calories) \(NSLocalizedString("diary.kcal", comment: "Kilocalories"))"
+            )
+            EORowSeparator()
+            importRecipeNutritionRow(
+                title: NSLocalizedString("addmeal.total.protein", comment: "Protein"),
+                value: importNutrientText(
+                    Double(importRecipeNutritionSummary(for: recipe).protein),
+                    unit: NSLocalizedString("unit.grams.short", comment: "Grams")
+                )
+            )
+            EORowSeparator()
+            importRecipeNutritionRow(
+                title: NSLocalizedString("addmeal.total.carbs", comment: "Carbohydrates"),
+                value: importNutrientText(
+                    Double(importRecipeNutritionSummary(for: recipe).carbs),
+                    unit: NSLocalizedString("unit.grams.short", comment: "Grams")
+                )
+            )
+            EORowSeparator()
+            importRecipeNutritionRow(
+                title: NSLocalizedString("addmeal.total.fat", comment: "Fat"),
+                value: importNutrientText(
+                    Double(importRecipeNutritionSummary(for: recipe).fat),
+                    unit: NSLocalizedString("unit.grams.short", comment: "Grams")
                 )
             )
         }
+    }
+
+    private var importNutritionFactsTitle: String {
+        NSLocalizedString(
+            "nutrition.facts.title",
+            tableName: nil,
+            bundle: .main,
+            value: "Nutrition Facts",
+            comment: "Nutrition facts table title"
+        )
+    }
+
+    private func importRecipeNutritionSummary(for recipe: RecipeSummary) -> NutritionSummary {
+        recipe.resolvedNutritionPer100g == .zero ? recipe.nutritionPerServing : recipe.resolvedNutritionPer100g
+    }
+
+    private func importRecipeNutritionRow(title: String, value: String) -> some View {
+        EOListRow(
+            title: Text(verbatim: title),
+            accessory: .value(Text(verbatim: value))
+        )
+    }
+
+    private func importNutrientText(_ value: Double, unit: String) -> String {
+        "\(formattedFoodAmountValue(value, maximumFractionDigits: value < 10 ? 1 : 0)) \(localizedNutritionUnit(unit))"
     }
 
     @ViewBuilder
@@ -4422,28 +4554,6 @@ struct SharedRecipeImportConfirmationSheet: View {
         }
     }
 
-    private func importIngredientRow(_ ingredient: RecipeIngredientSummary) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(importIngredientName(for: ingredient))
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 12)
-
-            Text(importAmountText(for: ingredient))
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.center)
-                .frame(minWidth: 72, alignment: .center)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
-    }
-
     private func importIngredientName(for ingredient: RecipeIngredientSummary) -> String {
         if let productName = catalogService.productSummary(for: ingredient)?.name.trimmingCharacters(in: .whitespacesAndNewlines),
            !productName.isEmpty {
@@ -4463,6 +4573,12 @@ struct SharedRecipeImportConfirmationSheet: View {
         return NSLocalizedString("recipe.editor.new_ingredient", comment: "Ingredient fallback")
     }
 
+    private func importIngredientMeta(for ingredient: RecipeIngredientSummary) -> String {
+        let note = ingredient.note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let amount = importAmountText(for: ingredient)
+        return note.isEmpty ? amount : "\(amount) - \(note)"
+    }
+
     private func importAmountText(for ingredient: RecipeIngredientSummary) -> String {
         let amount = ingredient.amount
         let unitText: String
@@ -4478,42 +4594,6 @@ struct SharedRecipeImportConfirmationSheet: View {
             return "\(Int(amount)) \(unitText)"
         }
         return String(format: "%.1f \(unitText)", amount)
-    }
-
-    private func importNutritionRow(title: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(title)
-                .font(.body)
-                .foregroundStyle(.secondary)
-
-            Spacer(minLength: 0)
-
-            Text(value)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(.trailing)
-                .frame(minWidth: 72, alignment: .trailing)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 6)
-    }
-
-    private var importDivider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.08))
-            .frame(height: 1)
-            .padding(.vertical, 8)
-    }
-
-    private func importSectionTitle(_ key: LocalizedStringKey) -> some View {
-        Text(key)
-            .font(.system(size: 23, weight: .bold, design: .rounded))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 2)
-    }
-
-    private func importGramsText(_ value: Int) -> String {
-        "\(value)"
     }
 
     private func loadPreview() {
@@ -4623,9 +4703,9 @@ struct SharedRecipeImportConfirmationSheet: View {
 }
 
 struct SharedMealImportSheet: View {
+    @EnvironmentObject private var catalogService: FoodCatalogService
     @EnvironmentObject private var diaryService: FoodDiaryService
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
 
     let shareCode: String
 
@@ -4636,16 +4716,8 @@ struct SharedMealImportSheet: View {
     @State private var alreadyImported = false
     @State private var errorMessage: String?
 
-    private var mealImportButtonBackground: Color {
-        colorScheme == .dark ? Color.white.opacity(0.96) : .black
-    }
-
-    private var mealImportButtonForeground: Color {
-        colorScheme == .dark ? .black : .white
-    }
-
-    private var mealImportButtonBorder: Color {
-        colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.08)
+    private var selectedCategory: MealCategory? {
+        diaryService.visibleMealCategories.first(where: { $0.id == selectedCategoryID })
     }
 
     private var mealAlreadyExistsMessage: String {
@@ -4679,9 +4751,12 @@ struct SharedMealImportSheet: View {
                     mealLoadingPlaceholder
                 }
             }
-            .background(Color.appPageBackground.ignoresSafeArea())
-            .navigationTitle("meal.import.title")
-            .navigationBarTitleDisplayMode(.inline)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .eoPageBackground()
+            .eoSheetChrome(
+                title: Text(verbatim: preview?.title ?? NSLocalizedString("meal.import.title", comment: "Import meal")),
+                onClose: { dismiss() }
+            )
             .task(id: shareCode) {
                 loadPreview()
             }
@@ -4696,15 +4771,6 @@ struct SharedMealImportSheet: View {
                 }
             } message: {
                 Text(errorMessage ?? "")
-            }
-            .toolbar {
-                ToolbarItem(placement: .platformTopBarLeading) {
-                    PressableIconButton(action: { dismiss() }) {
-                        Label("common.close", systemImage: "xmark")
-                            .labelStyle(.iconOnly)
-                            .frame(width: 48, height: 48)
-                    }
-                }
             }
         }
     }
@@ -4723,98 +4789,95 @@ struct SharedMealImportSheet: View {
 
     private func mealContent(_ meal: MealEntry) -> some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 18) {
-                if !meal.items.isEmpty {
-                    mealItemsSection(meal)
-                }
-
-                mealNutritionSection(meal)
-
-                mealDestinationSection
-
+            VStack(alignment: .leading, spacing: EOTheme.Metrics.sectionSpacing) {
+                mealIdentityCard(meal)
+                mealItemsCard(meal)
+                mealNutritionCard(meal)
+                mealDestinationCard
                 mealStatusSection
-
                 mealImportButtonSection
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
+            .eoCardInsets()
+            .padding(.top, 12)
             .padding(.bottom, 24)
         }
     }
 
-    private func mealItemsSection(_ meal: MealEntry) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            mealSectionTitle("meal.import.items_section")
-
-            VStack(spacing: 0) {
-                ForEach(Array(meal.items.enumerated()), id: \.element.id) { index, item in
-                    HStack(alignment: .center, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(item.name)
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(verbatim: "\(Int(item.amount)) \(item.unit.shortTitle)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        Text(String(format: NSLocalizedString("today.kcal_value", comment: "Calories value"), item.calories))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    .padding(.vertical, 4)
-
-                    if index < meal.items.count - 1 {
-                        mealDivider
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
-        }
-    }
-
-    private func mealNutritionSection(_ meal: MealEntry) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            mealSectionTitle(Text(mealNutritionFactsTitle))
-
-            NutritionFactsTableCard(
-                headerTitle: NSLocalizedString("addmeal.section.total", comment: "Total nutrition card title"),
-                summary: NutritionSummary(
-                    calories: meal.calories,
-                    protein: meal.protein,
-                    fat: meal.fat,
-                    carbs: meal.carbs
-                )
+    private func mealIdentityCard(_ meal: MealEntry) -> some View {
+        EOCard {
+            EOListRow(
+                title: Text(verbatim: meal.title),
+                subtitle: Text(verbatim: selectedTimeText)
             )
+            EORowSeparator()
+            EOListRow(title: Text("addmeal.time")) {
+                DatePicker(
+                    "",
+                    selection: $selectedDate,
+                    displayedComponents: .hourAndMinute
+                )
+                .datePickerStyle(.compact)
+                .labelsHidden()
+            }
         }
     }
 
-    private var mealDestinationSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            mealSectionTitle("meal.import.destination_section")
+    private func mealItemsCard(_ meal: MealEntry) -> some View {
+        EOCard {
+            EOCardTitleRow(title: Text(verbatim: NSLocalizedString("mealtemplate.detail.items", comment: "Food in meal section title")))
 
-            VStack(spacing: 0) {
-                DatePicker("meal.import.date", selection: $selectedDate)
-                    .padding(.vertical, 8)
+            if meal.items.isEmpty {
+                EORowSeparator()
+                EOListRow(
+                    title: Text(verbatim: NSLocalizedString("mealtemplate.detail.empty_items", comment: "Empty meal")),
+                    titleColor: .secondary
+                )
+            } else {
+                ForEach(meal.items) { item in
+                    EORowSeparator()
+                    EOListRow(
+                        title: Text(verbatim: item.name),
+                        subtitle: Text(verbatim: mealItemMetaText(item))
+                    )
+                }
+            }
+        }
+    }
 
-                mealDivider
+    private func mealNutritionCard(_ meal: MealEntry) -> some View {
+        EOCard {
+            EOCardTitleRow(title: Text(verbatim: mealNutritionFactsTitle))
+            EORowSeparator()
+            mealNutritionRow("addmeal.total.calories", value: meal.calories, unit: NSLocalizedString("diary.kcal", comment: "Kilocalories"))
+            EORowSeparator()
+            mealNutritionRow("addmeal.total.protein", value: meal.protein, unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
+            EORowSeparator()
+            mealNutritionRow("addmeal.total.carbs", value: meal.carbs, unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
+            EORowSeparator()
+            mealNutritionRow("addmeal.total.fat", value: meal.fat, unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
+        }
+    }
 
-                Picker("meal.import.meal", selection: $selectedCategoryID) {
-                    ForEach(diaryService.visibleMealCategories) { category in
+    private var mealDestinationCard: some View {
+        EOCard {
+            EOCardTitleRow(title: Text("meal.import.destination_section"))
+            EORowSeparator()
+            Menu {
+                ForEach(diaryService.visibleMealCategories) { category in
+                    Button {
+                        selectedCategoryID = category.id
+                    } label: {
                         Label(category.displayTitle, systemImage: category.symbolName)
-                            .tag(category.id)
                     }
                 }
-                .padding(.vertical, 8)
+            } label: {
+                EOListRow(
+                    title: Text("meal.import.meal"),
+                    accessory: .valueChevron(Text(verbatim: selectedCategory?.displayTitle ?? ""))
+                )
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(18)
-            .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
+            .buttonStyle(.plain)
+            .tint(.primary)
         }
     }
 
@@ -4833,76 +4896,31 @@ struct SharedMealImportSheet: View {
     @ViewBuilder
     private var mealImportButtonSection: some View {
         if !alreadyImported {
-            PressableIconButton(disabled: isLoading, action: importMeal) {
+            PressableIconButton(disabled: isLoading || selectedCategory == nil, action: importSelectedMeal) {
                 if isLoading {
                     ProgressView()
-                        .tint(mealImportButtonForeground)
+                        .tint(Color.appAccentReadableText)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .frame(height: 52)
                 } else {
                     Label("meal.import.submit", systemImage: "plus.circle.fill")
                         .labelStyle(.titleAndIcon)
                         .font(.headline)
-                        .foregroundStyle(mealImportButtonForeground)
+                        .foregroundStyle(Color.appAccentReadableText)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .frame(height: 52)
                 }
             }
-            .background(mealImportButtonBackground)
-            .overlay(
-                RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous)
-                    .stroke(mealImportButtonBorder, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
+            .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .opacity(isLoading ? 0.6 : 1)
         }
     }
 
-    private func mealNutritionRow(title: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(title)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 0)
-
-            NutritionValueText(value: value)
-        }
-        .padding(.vertical, 10)
-    }
-
-    private var mealDivider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.08))
-            .frame(height: 1)
-            .padding(.vertical, 8)
-    }
-
-    private var mealNutritionDivider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.08))
-            .frame(height: 1)
-    }
-
-    private func mealSectionTitle(_ key: LocalizedStringKey) -> some View {
-        Text(key)
-            .font(.system(size: 23, weight: .bold, design: .rounded))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 2)
-    }
-
-    private func mealSectionTitle(_ title: Text) -> some View {
-        title
-            .font(.system(size: 23, weight: .bold, design: .rounded))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 2)
-    }
-
-    private func mealGramsText(_ value: Int) -> String {
-        "\(value)"
+    private func mealNutritionRow(_ title: LocalizedStringKey, value: Int, unit: String) -> some View {
+        EOListRow(
+            title: Text(title),
+            accessory: .value(Text(verbatim: "\(value) \(unit)"))
+        )
     }
 
     private func loadPreview() {
@@ -4914,9 +4932,10 @@ struct SharedMealImportSheet: View {
                 isLoading = false
                 preview = meal
                 if let meal {
-                    selectedDate = meal.scheduledAt
                     let availableCategories = diaryService.visibleMealCategories
-                    let defaultCategoryID = availableCategories.first(where: { $0.id == meal.mealCategoryID })?.id ?? availableCategories.first?.id ?? ""
+                    let defaultCategory = availableCategories.first(where: { $0.id == meal.mealCategoryID }) ?? availableCategories.first
+                    let defaultCategoryID = defaultCategory?.id ?? ""
+                    selectedDate = defaultImportDate(for: meal, fallbackCategory: defaultCategory)
                     selectedCategoryID = defaultCategoryID
                     alreadyImported = diaryService.isKnownImportedSharedMeal(code: shareCode, preview: meal)
                 }
@@ -4927,25 +4946,23 @@ struct SharedMealImportSheet: View {
         }
     }
 
-    private func importMeal() {
-        guard let preview else { return }
+    private func importSelectedMeal() {
+        guard let category = selectedCategory else { return }
+        importMeal(into: category)
+    }
+
+    private func importMeal(into category: MealCategory) {
+        guard preview != nil else { return }
         isLoading = true
         Task {
-            let targetCategoryID: String = {
-                let availableCategories = diaryService.visibleMealCategories
-                if availableCategories.contains(where: { $0.id == selectedCategoryID }) {
-                    return selectedCategoryID
-                }
-                return availableCategories.first?.id ?? preview.mealCategoryID
-            }()
-
             let importedMeal = await diaryService.importSharedMeal(
                 code: shareCode,
-                scheduledAt: selectedDate,
-                mealCategoryID: targetCategoryID
+                scheduledAt: resolvedImportDate(for: category),
+                mealCategoryID: category.id
             )
             await MainActor.run {
                 isLoading = false
+                selectedCategoryID = category.id
                 if importedMeal != nil {
                     dismiss()
                 } else if diaryService.lastSharedMealImportAlreadyExists {
@@ -4956,6 +4973,57 @@ struct SharedMealImportSheet: View {
                 }
             }
         }
+    }
+
+    private func resolvedImportDate(for category: MealCategory) -> Date {
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: Date())
+        let hour = calendar.component(.hour, from: selectedDate)
+        let minute = calendar.component(.minute, from: selectedDate)
+        return calendar.date(
+            bySettingHour: hour,
+            minute: minute,
+            second: 0,
+            of: dayStart
+        ) ?? calendar.date(
+            bySettingHour: category.preferredHour,
+            minute: category.preferredMinute,
+            second: 0,
+            of: dayStart
+        ) ?? selectedDate
+    }
+
+    private func mealItemMetaText(_ item: MealItemEntry) -> String {
+        let amountText = displayFoodQuantityText(
+            amount: item.amount,
+            unit: item.unit,
+            servingLabel: item.servingLabel,
+            product: catalogService.productSummary(for: item)
+        )
+        return "\(amountText) - \(item.calories)kc - \(item.protein)p - \(item.carbs)c - \(item.fat)f"
+    }
+
+    private var selectedTimeText: String {
+        selectedDate.formatted(date: .omitted, time: .shortened)
+    }
+
+    private func defaultImportDate(for meal: MealEntry, fallbackCategory: MealCategory?) -> Date {
+        let calendar = Calendar.current
+        let dayStart = calendar.startOfDay(for: Date())
+        let sourceHour = calendar.component(.hour, from: meal.scheduledAt)
+        let sourceMinute = calendar.component(.minute, from: meal.scheduledAt)
+
+        return calendar.date(
+            bySettingHour: sourceHour,
+            minute: sourceMinute,
+            second: 0,
+            of: dayStart
+        ) ?? calendar.date(
+            bySettingHour: fallbackCategory?.preferredHour ?? sourceHour,
+            minute: fallbackCategory?.preferredMinute ?? sourceMinute,
+            second: 0,
+            of: dayStart
+        ) ?? Date()
     }
 }
 

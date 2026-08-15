@@ -493,6 +493,7 @@
 "profile.notifications.mark_all_read.confirm.message" = "Все уведомления будут отмечены как прочитанные.";
 "profile.notifications.open_related" = "Перейти";
 "profile.notifications.open_meal" = "Записать";
+"profile.notifications.open_meal_sheet" = "Открыть приём пищи";
 "supporter.hero.title" = "Поддержите развитие";
 "supporter.hero.subtitle" = "Помогите нам развивать приложение дальше. Подписку можно отменить в любой момент.";
 "supporter.per_month" = "/мес";
@@ -999,6 +1000,8 @@
 "profile.notifications.empty.subtitle" = "Здесь появятся новые push-уведомления.";
 "profile.notifications.fallback.diary" = "Дневник";
 "profile.notifications.fallback.generic" = "Уведомление";
+"profile.notifications.meal_reminder.title" = "Напоминание о приёме пищи";
+"profile.notifications.meal_reminder.message" = "Не забудьте записать то, что вы съели.";
 "profile.notifications.mark_read" = "Отметить прочитанным";
 "profile.password.error.same_as_current" = "Новый пароль совпадает с текущим.";
 "profile.password.error.short" = "Пароль слишком короткий.";

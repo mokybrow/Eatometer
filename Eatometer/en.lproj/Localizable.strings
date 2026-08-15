@@ -495,6 +495,7 @@
 "profile.notifications.mark_all_read.confirm.message" = "All notifications will be marked as read.";
 "profile.notifications.open_related" = "Go";
 "profile.notifications.open_meal" = "Log";
+"profile.notifications.open_meal_sheet" = "Open meal";
 "supporter.hero.title" = "Support development";
 "supporter.hero.subtitle" = "Help us keep building the app. Cancel anytime.";
 "supporter.per_month" = "/month";
@@ -997,6 +998,8 @@
 "profile.notifications.empty.subtitle" = "New push notifications will appear here.";
 "profile.notifications.fallback.diary" = "Diary";
 "profile.notifications.fallback.generic" = "Notification";
+"profile.notifications.meal_reminder.title" = "Meal reminder";
+"profile.notifications.meal_reminder.message" = "Don't forget to log what you ate.";
 "profile.notifications.mark_read" = "Mark as read";
 "profile.password.error.same_as_current" = "The new password matches the current one.";
 "profile.password.error.short" = "The password is too short.";

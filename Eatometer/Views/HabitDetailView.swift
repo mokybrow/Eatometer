@@ -40,8 +40,6 @@ struct HabitDetailView: View {
                     }
 
                     if !pastAttempts.isEmpty {
-                        EOSectionHeader(verbatim: localizedHabitString("habits.detail.history", fallback: "Past attempts"))
-                            .padding(.horizontal, -EOTheme.Metrics.screenInset)
                         historyCard(habit: h, attempts: pastAttempts)
                     }
                 }
@@ -62,7 +60,7 @@ struct HabitDetailView: View {
                 let automaticDaysToSeed: [Date]
                 if shouldSeedManualCheckIns {
                     await loadAutomaticHistoryIfNeeded(for: h)
-                    automaticDaysToSeed = automaticSuccessfulDays(for: h)
+                    automaticDaysToSeed = manualTransitionSeedDays(for: h)
                 } else {
                     automaticDaysToSeed = []
                 }
@@ -365,29 +363,17 @@ struct HabitDetailView: View {
     }
 
     private func historyCard(habit: Habit, attempts: [HabitAttempt]) -> some View {
-        VStack(spacing: 0) {
-            ForEach(Array(attempts.enumerated()), id: \.element.id) { index, attempt in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(attemptTitle(attempt))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
+        EOCard {
+            EOCardTitleRow(title: Text(verbatim: localizedHabitString("habits.detail.history", fallback: "Past attempts")))
 
-                    Text(attemptDurationSubtitle(attempt, habit: habit))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 14)
-
-                if index < attempts.count - 1 {
-                    Divider()
-                }
+            ForEach(attempts) { attempt in
+                EORowSeparator()
+                EOListRow(
+                    title: Text(verbatim: attemptDurationTitle(attempt, habit: habit)),
+                    subtitle: Text(verbatim: attemptDateSubtitle(attempt))
+                )
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
     }
 
     private func sectionHeader(title: String, subtitle: String? = nil) -> some View {
@@ -427,19 +413,35 @@ struct HabitDetailView: View {
         return "\(habit.dailyTarget) \(habit.unitLabel)"
     }
 
-    private func attemptTitle(_ attempt: HabitAttempt) -> String {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .none
-        let start = f.string(from: attempt.startedAt)
+    private func attemptDateSubtitle(_ attempt: HabitAttempt) -> String {
+        let start = compactAttemptDateText(for: attempt.startedAt)
         if let ended = attempt.endedAt {
-            return "\(start) – \(f.string(from: ended))"
+            return "\(start) - \(compactAttemptDateText(for: ended))"
         }
         return start
     }
 
-    private func attemptDurationSubtitle(_ attempt: HabitAttempt, habit: Habit) -> String {
-        String(
+    private func attemptDurationTitle(_ attempt: HabitAttempt, habit: Habit) -> String {
+        localizedDayCountText(resolvedAttemptDurationDays(attempt, for: habit))
+    }
+
+    private func compactAttemptDateText(for date: Date) -> String {
+        let calendar = Calendar.autoupdatingCurrent
+        let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
+        let currentYear = calendar.component(.year, from: Date())
+        let targetYear = calendar.component(.year, from: date)
+        formatter.dateFormat = currentYear == targetYear ? "dd.MM" : "dd.MM.yyyy"
+        return formatter.string(from: date)
+    }
+
+    private func localizedDayCountText(_ days: Int) -> String {
+        let localeIdentifier = Locale.autoupdatingCurrent.identifier.lowercased()
+        if localeIdentifier.hasPrefix("ru") {
+            return russianDayCountText(days)
+        }
+
+        return String(
             format: NSLocalizedString(
                 "habits.detail.history.duration",
                 tableName: nil,
@@ -447,8 +449,30 @@ struct HabitDetailView: View {
                 value: "%d days",
                 comment: "Past habit attempt duration"
             ),
-            resolvedAttemptDurationDays(attempt, for: habit)
+            days
         )
+    }
+
+    private func russianDayCountText(_ days: Int) -> String {
+        let absoluteDays = abs(days)
+        let mod100 = absoluteDays % 100
+        let mod10 = absoluteDays % 10
+
+        let suffix: String
+        if mod100 >= 11 && mod100 <= 14 {
+            suffix = "дней"
+        } else {
+            switch mod10 {
+            case 1:
+                suffix = "день"
+            case 2, 3, 4:
+                suffix = "дня"
+            default:
+                suffix = "дней"
+            }
+        }
+
+        return "\(days) \(suffix)"
     }
 
     private func automaticDayState(for day: Date, habit: Habit, tracker: HabitAutomaticTracker, trackingStart: Date) -> HabitDayState {
@@ -743,6 +767,26 @@ struct HabitDetailView: View {
 
         return daysInRange(from: trackingStart, through: completedDay).filter { day in
             automaticDayState(for: day, habit: habit, tracker: tracker, trackingStart: trackingStart) == .success
+        }
+    }
+
+    private func manualTransitionSeedDays(for habit: Habit, on referenceDate: Date = .now) -> [Date] {
+        if automaticTracker(for: habit) != nil {
+            return automaticSuccessfulDays(for: habit, on: referenceDate)
+        }
+
+        guard let attempt = habit.currentAttempt else { return [] }
+
+        let completedDays = HabitProgressClock.completedDays(for: attempt, at: referenceDate)
+        guard completedDays > 0 else { return [] }
+
+        let calendar = Calendar.current
+        return (0..<completedDays).compactMap { completedDayIndex in
+            HabitProgressClock.manualCheckDay(
+                for: attempt,
+                completedDayIndex: completedDayIndex,
+                calendar: calendar
+            )
         }
     }
 

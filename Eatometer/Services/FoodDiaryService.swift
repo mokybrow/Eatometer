@@ -867,6 +867,7 @@ final class FoodDiaryService: ObservableObject {
                 }
             }
 
+            await prefetchMissingCatalogItems(from: [response.meal])
             var entry = hydratedMealEntry(mapMeal(response.meal), fallback: meal)
             entry.mealCategoryID = assignedCategoryID
             replaceMeal(with: entry)
@@ -1026,6 +1027,7 @@ final class FoodDiaryService: ObservableObject {
                     try await client.getSharedMeal(request, metadata: metadata)
                 }
             }
+            await prefetchMissingCatalogItems(from: [response.meal])
             lastErrorMessage = nil
             return mapMeal(response.meal)
         } catch {
@@ -1048,6 +1050,7 @@ final class FoodDiaryService: ObservableObject {
                     try await client.saveSharedMeal(request, metadata: metadata)
                 }
             }
+            await prefetchMissingCatalogItems(from: [response.meal])
             var entry = mapMeal(response.meal)
             if requiresLinkedItemHydration(entry) {
                 let preview = await previewSharedMeal(code: normalizedCode)
@@ -1160,6 +1163,17 @@ final class FoodDiaryService: ObservableObject {
         Task {
             await pushNutritionSettingsToRemote()
         }
+    }
+
+    func applyOnboardingNutritionSetup(goal: DailyNutritionGoal, mealCategories categories: [MealCategory]) async {
+        let sanitizedGoal = goal.sanitized
+        let normalizedCategories = FoodDiaryService.normalizeMealCategories(categories.isEmpty ? MealCategory.default : categories)
+        dailyGoal = sanitizedGoal
+        mealCategories = normalizedCategories
+        persistDailyGoal()
+        persistMealCategories()
+        markLocalNutritionSettingsUpdatedNow()
+        await pushNutritionSettingsToRemote()
     }
 
     func setDietPlan(_ plan: DietPlanOption) {
@@ -2335,10 +2349,12 @@ final class FoodDiaryService: ObservableObject {
 
             if !shouldDetachLinkedItem {
                 if let productID = item.productID,
-                   catalogService?.productSummary(id: productID) == nil {
+                   catalogService?.productSummary(id: productID) == nil,
+                   item.productSnapshot == nil {
                     _ = await catalogService?.fetchProduct(id: productID)
                 } else if let recipeID = item.recipeID,
-                          catalogService?.recipeSummary(id: recipeID) == nil {
+                          catalogService?.recipeSummary(id: recipeID) == nil,
+                          item.recipeSnapshot == nil {
                     _ = await catalogService?.fetchRecipe(id: recipeID)
                 }
             }
@@ -2457,6 +2473,9 @@ final class FoodDiaryService: ObservableObject {
 
     private func shouldDetachLinkedItemForSaving(_ item: MealItemEntry) async -> Bool {
         if let productID = item.productID {
+            if item.productSnapshot != nil, catalogService?.productSummary(id: productID) == nil {
+                return hasAnyNutrition(item)
+            }
             if catalogService?.productSummary(id: productID) != nil {
                 return false
             }
@@ -2466,6 +2485,9 @@ final class FoodDiaryService: ObservableObject {
         }
 
         if let recipeID = item.recipeID {
+            if item.recipeSnapshot != nil, catalogService?.recipeSummary(id: recipeID) == nil {
+                return hasAnyNutrition(item)
+            }
             if catalogService?.recipeSummary(id: recipeID) != nil {
                 return false
             }
@@ -2485,14 +2507,16 @@ final class FoodDiaryService: ObservableObject {
 
         for meal in meals {
             for item in meal.items {
+                let snapshot = item.hasSnapshot ? FoodCatalogService.linkedSummaries(from: item.snapshot) : (product: nil, recipe: nil)
+
                 if let productID = UUID(uuidString: item.productID),
                    catalogService.productSummary(id: productID) == nil,
-                   !item.hasSnapshot {
+                   snapshot.product == nil {
                     missingProductIDs.insert(productID)
                 }
                 if let recipeID = UUID(uuidString: item.recipeID),
                    catalogService.recipeSummary(id: recipeID) == nil,
-                   !item.hasSnapshot {
+                   snapshot.recipe == nil {
                     missingRecipeIDs.insert(recipeID)
                 }
             }

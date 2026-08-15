@@ -34,6 +34,10 @@ struct RecipeDetailView: View {
         catalogService.portionWeight(for: recipe)
     }
 
+    private var nutritionFactsSummary: NutritionSummary {
+        nutritionPreview.per100g == .zero ? nutritionPreview.perServing : nutritionPreview.per100g
+    }
+
     private var sortedIngredients: [RecipeIngredientSummary] {
         recipe.ingredients.sorted { lhs, rhs in
             let lhsAmount = comparableAmount(for: lhs)
@@ -223,13 +227,7 @@ struct RecipeDetailView: View {
     private var nutritionSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionTitle(Text(nutritionFactsTitle))
-
-            NutritionFactsTableCard(
-                leftHeaderTitle: NSLocalizedString("recipe.editor.per_100g", comment: "Per 100g"),
-                rightHeaderTitle: NSLocalizedString("recipe.editor.per_serving", comment: "Per serving"),
-                leftSummary: nutritionPreview.per100g,
-                rightSummary: nutritionPreview.perServing
-            )
+            nutritionFactsCard
         }
     }
 
@@ -334,15 +332,36 @@ struct RecipeDetailView: View {
     }
 
     private var nutritionFactsCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle(Text(verbatim: nutritionFactsTitle))
-            NutritionFactsTableCard(
-                leftHeaderTitle: NSLocalizedString("recipe.editor.per_100g", comment: "Per 100g"),
-                rightHeaderTitle: NSLocalizedString("recipe.editor.per_serving", comment: "Per serving"),
-                leftSummary: nutritionPreview.per100g,
-                rightSummary: nutritionPreview.perServing
+        EOCard {
+            EOCardTitleRow(title: Text(verbatim: nutritionFactsTitle))
+            EORowSeparator()
+            recipeNutritionRow(
+                title: NSLocalizedString("addmeal.total.calories", comment: "Calories"),
+                value: "\(nutritionFactsSummary.calories) \(NSLocalizedString("diary.kcal", comment: "Kilocalories"))"
+            )
+            EORowSeparator()
+            recipeNutritionRow(
+                title: NSLocalizedString("addmeal.total.protein", comment: "Protein"),
+                value: nutrientText(Double(nutritionFactsSummary.protein), unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
+            )
+            EORowSeparator()
+            recipeNutritionRow(
+                title: NSLocalizedString("addmeal.total.carbs", comment: "Carbohydrates"),
+                value: nutrientText(Double(nutritionFactsSummary.carbs), unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
+            )
+            EORowSeparator()
+            recipeNutritionRow(
+                title: NSLocalizedString("addmeal.total.fat", comment: "Fat"),
+                value: nutrientText(Double(nutritionFactsSummary.fat), unit: NSLocalizedString("unit.grams.short", comment: "Grams"))
             )
         }
+    }
+
+    private func recipeNutritionRow(title: String, value: String) -> some View {
+        EOListRow(
+            title: Text(verbatim: title),
+            accessory: .value(Text(verbatim: value))
+        )
     }
 
     private func sectionTitle(_ key: LocalizedStringKey) -> some View {
@@ -425,6 +444,10 @@ struct RecipeDetailView: View {
 
     private func gramsText(_ value: Int) -> String {
         String(format: NSLocalizedString("recipe.grams_value", comment: "Grams value"), value)
+    }
+
+    private func nutrientText(_ value: Double, unit: String) -> String {
+        "\(formattedFoodAmountValue(value, maximumFractionDigits: value < 10 ? 1 : 0)) \(localizedNutritionUnit(unit))"
     }
 
     /// The link for this thing, made on demand and reused after the first time.

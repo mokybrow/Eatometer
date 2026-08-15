@@ -93,13 +93,9 @@ struct HabitsView: View {
         .toolbarTitleDisplayMode(.inlineLarge)
         .toolbar {
             ToolbarItemGroup(placement: .platformTopBarTrailing) {
-                Button {
+                NotificationBellButton {
                     isNotificationsPresented = true
-                } label: {
-                    Image(systemName: "bell")
-                        .foregroundStyle(.primary)
                 }
-                .accessibilityLabel(Text("profile.notifications.inbox.title"))
 
                 Button {
                     showCreateSheet = true
@@ -183,8 +179,17 @@ struct HabitsView: View {
         }
     }
 
-    private func displayedCurrentStreak(for habit: Habit) -> Int {
-        streaksByHabitID[habit.id] ?? 0
+    private func displayedCurrentStreak(for habit: Habit, at date: Date) -> Int {
+        guard habit.currentAttempt?.endedAt == nil else {
+            return streaksByHabitID[habit.id] ?? 0
+        }
+
+        return HabitStreakResolver.currentStreak(
+            for: habit,
+            habitsService: habitsService,
+            diaryService: diaryService,
+            on: date
+        )
     }
 
     private var emptyCard: some View {
@@ -192,7 +197,7 @@ struct HabitsView: View {
     }
 
     private func displayedProgressDays(for habit: Habit, at date: Date) -> Double {
-        let currentStreak = Double(displayedCurrentStreak(for: habit))
+        let currentStreak = Double(displayedCurrentStreak(for: habit, at: date))
         guard let attempt = habit.currentAttempt, attempt.endedAt == nil else {
             return currentStreak
         }
@@ -212,7 +217,7 @@ struct HabitsView: View {
                         habit: habit,
                         progress: .make(for: displayedProgressDays(for: habit, at: now)),
                         clientSettings: habit.clientSettings,
-                        streakDays: displayedCurrentStreak(for: habit)
+                        streakDays: displayedCurrentStreak(for: habit, at: now)
                     )
                     .equatable()
                 }

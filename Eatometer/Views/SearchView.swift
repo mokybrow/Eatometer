@@ -606,8 +606,12 @@ struct SearchView: View {
         let perServingTitle = NSLocalizedString("recipe.editor.per_serving", comment: "Per serving")
         let per100gTitle = NSLocalizedString("recipe.editor.per_100g", comment: "Per 100g")
         let per100gNutrition = recipe.resolvedNutritionPer100g
+        let displayedCalories = recipe.caloriesPerServing > 0 ? recipe.caloriesPerServing : per100gNutrition.calories
+        let primarySuffix = recipe.caloriesPerServing > 0 ? perServingTitle : per100gTitle
 
-        var components = ["\(recipe.caloriesPerServing) \(caloriesUnit) · \(perServingTitle)"]
+        var components = displayedCalories > 0
+            ? ["\(displayedCalories) \(caloriesUnit) · \(primarySuffix)"]
+            : [perServingTitle]
         if per100gNutrition != .zero {
             components.append("\(per100gNutrition.calories) \(caloriesUnit) · \(per100gTitle)")
         }

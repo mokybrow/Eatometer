@@ -9,6 +9,7 @@ struct MealEntryViewerSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let title: String
+    let scheduledAt: Date
     let items: [MealItemEntry]
     let nutrition: NutritionSummary
     /// Creates — or reuses — the link for this meal. Returns nil when the meal
@@ -41,7 +42,10 @@ struct MealEntryViewerSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: EOTheme.Metrics.sectionSpacing) {
                     EOCard {
-                        EOListRow(title: Text(verbatim: title))
+                        EOListRow(
+                            title: Text(verbatim: title),
+                            subtitle: Text(verbatim: scheduledTimeText)
+                        )
                     }
 
                     itemsCard
@@ -66,6 +70,10 @@ struct MealEntryViewerSheet: View {
                 )
             }
         }
+    }
+
+    private var scheduledTimeText: String {
+        scheduledAt.formatted(date: .omitted, time: .shortened)
     }
 
     private var itemsCard: some View {

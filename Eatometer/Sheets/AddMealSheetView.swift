@@ -905,7 +905,7 @@ struct AddMealSheetView: View {
     }
 
     @MainActor
-    private func shareSheetItem(for payload: FoodSharePayload) -> SystemShareSheetItem {
+    private func shareSheetItem(for payload: FoodSharePayload) -> SystemShareSheetItem? {
         let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? payload.title
             : draft.title
@@ -933,22 +933,17 @@ struct AddMealSheetView: View {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: "\n")
-        let link = payload.resolvedShareLink ?? payload.shareCode
-        if let url = URL(string: link), url.scheme != nil {
-            return SystemShareSheetItem(
-                message: caption,
-                url: url,
-                card: .make(
-                    title: title,
-                    kindKey: "share.card.kind.meal",
-                    items: normalizedDraft.items,
-                    nutrition: normalizedDraft.nutrition
-                )
+        guard let url = payload.resolvedShareURL else { return nil }
+        return SystemShareSheetItem(
+            message: caption,
+            url: url,
+            card: .make(
+                title: title,
+                kindKey: "share.card.kind.meal",
+                items: normalizedDraft.items,
+                nutrition: normalizedDraft.nutrition
             )
-        }
-        // No card without a link: the picture is only half the message, and half
-        // a message is worse than a code the reader can paste.
-        return SystemShareSheetItem(message: caption, text: link)
+        )
     }
 
     @MainActor
@@ -1044,6 +1039,42 @@ struct AddMealSheetView: View {
             }
 
             if let product {
+                let normalizedServingLabel = item.servingLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let servingOption = product.selectableServingOption(matching: normalizedServingLabel),
+                   servingOption.unit == .serving {
+                    let servingQuantity: Double
+                    if item.unit == .serving {
+                        servingQuantity = max(item.amount, 1)
+                    } else if item.unit == servingOption.effectiveMetricUnit,
+                              servingOption.effectiveMetricAmount > 0 {
+                        servingQuantity = item.amount / servingOption.effectiveMetricAmount
+                    } else {
+                        servingQuantity = max(item.amount, 1)
+                    }
+
+                    let caloriesPerServing = Int((Double(product.caloriesPer100g) * servingOption.effectiveMetricAmount / 100.0).rounded())
+                    let proteinPerServing = Int((Double(product.proteinPer100g) * servingOption.effectiveMetricAmount / 100.0).rounded())
+                    let fatPerServing = Int((Double(product.fatPer100g) * servingOption.effectiveMetricAmount / 100.0).rounded())
+                    let carbsPerServing = Int((Double(product.carbsPer100g) * servingOption.effectiveMetricAmount / 100.0).rounded())
+
+                    return MealItemEntry(
+                        id: UUID(),
+                        name: product.name,
+                        amount: servingQuantity,
+                        unit: .serving,
+                        note: "",
+                        servingLabel: servingOption.selectionLabel,
+                        caloriesPer100g: caloriesPerServing,
+                        proteinPer100g: proteinPerServing,
+                        fatPer100g: fatPerServing,
+                        carbsPer100g: carbsPerServing,
+                        productID: productID,
+                        recipeID: nil,
+                        productSnapshot: product,
+                        recipeSnapshot: nil
+                    )
+                }
+
                 return MealItemEntry(
                     id: UUID(),
                     name: product.name,
@@ -1384,6 +1415,7 @@ struct MealItemQuantityEditorSheet: View {
     let onConfirm: (() -> Void)?
     let onClose: () -> Void
     @FocusState private var isAmountFieldFocused: Bool
+    @State private var amountDraftText: String = ""
 
     init(
         item: Binding<MealItemEntry>,
@@ -1420,14 +1452,7 @@ struct MealItemQuantityEditorSheet: View {
 
     private var productMetricUnits: [MealItemUnit] {
         guard let linkedProduct else { return [] }
-
-        var seen = Set<MealItemUnit>()
-        return linkedProduct.resolvedServingOptions.compactMap { option in
-            let unit = option.effectiveMetricUnit
-            guard unit != .serving, !seen.contains(unit) else { return nil }
-            seen.insert(unit)
-            return unit
-        }
+        return [linkedProduct.baseNutritionUnit]
     }
 
     private var allowedUnits: [MealItemUnit] {
@@ -1565,12 +1590,30 @@ struct MealItemQuantityEditorSheet: View {
                     }
                     EORowSeparator()
 
-                    EOStepperRow(
-                        title: Text(verbatim: amountText(for: displayAmount)),
-                        canDecrement: canDecrease,
-                        onDecrement: { adjustAmount(by: -amountStep(for: item.unit)) },
-                        onIncrement: { adjustAmount(by: amountStep(for: item.unit)) }
-                    )
+                    EOListRow(title: Text("addmeal.amount")) {
+                        HStack(spacing: 10) {
+                            TextField(
+                                "",
+                                text: $amountDraftText,
+                                prompt: Text("addmeal.amount.placeholder").foregroundStyle(.secondary)
+                            )
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .focused($isAmountFieldFocused)
+                            .frame(maxWidth: 96, alignment: .trailing)
+                            .font(EOTheme.Typography.rowValue.monospacedDigit())
+                            .onChange(of: amountDraftText) { _, newValue in
+                                amountDraftText = sanitizedDecimalText(newValue)
+                            }
+
+                            EOStepperControl(
+                                canDecrement: canDecrease,
+                                canIncrement: true,
+                                onDecrement: { adjustAmount(by: -amountStep(for: item.unit)) },
+                                onIncrement: { adjustAmount(by: amountStep(for: item.unit)) }
+                            )
+                        }
+                    }
                 }
 
                 if onDelete != nil {
@@ -1618,19 +1661,19 @@ struct MealItemQuantityEditorSheet: View {
         .presentationDragIndicator(.visible)
         .onAppear {
             normalizeDefaultMetricUnitIfNeeded()
+            syncAmountDraftText()
         }
-    }
-
-    private var amountTextBinding: Binding<String> {
-        Binding(
-            get: {
-                amountText(for: displayAmount)
-            },
-            set: { newValue in
-                let normalized = newValue.replacingOccurrences(of: ",", with: ".")
-                applyAmount(Double(normalized) ?? minimumDisplayAmount)
+        .onChange(of: displayAmount) { _, _ in
+            guard !isAmountFieldFocused else { return }
+            syncAmountDraftText()
+        }
+        .onChange(of: isAmountFieldFocused) { _, isFocused in
+            if isFocused {
+                syncAmountDraftText()
+            } else {
+                commitAmountDraftText()
             }
-        )
+        }
     }
 
     private var displayTitle: String {
@@ -1657,11 +1700,13 @@ struct MealItemQuantityEditorSheet: View {
             item.amount = nextAmount * selectedServingOption.effectiveMetricAmount
             item.unit = selectedServingOption.effectiveMetricUnit
             item.servingLabel = selectedServingOption.selectionLabel
+            syncAmountDraftText()
             return
         }
 
         let nextAmount = item.amount + delta
         item.amount = max(minimumAmount(for: item.unit), nextAmount)
+        syncAmountDraftText()
     }
 
     private func amountStep(for unit: MealItemUnit) -> Double {
@@ -1709,13 +1754,18 @@ struct MealItemQuantityEditorSheet: View {
             item.amount = resolvedAmount * selectedServingOption.effectiveMetricAmount
             item.unit = selectedServingOption.effectiveMetricUnit
             item.servingLabel = selectedServingOption.selectionLabel
+            syncAmountDraftText()
             return
         }
 
         item.amount = max(minimumAmount(for: item.unit), resolvedAmount)
+        syncAmountDraftText()
     }
 
     private func selectUnit(_ unit: MealItemUnit) {
+        let previousUnit = item.unit
+        let previousAmount = item.amount
+
         if let linkedRecipe {
             selectRecipeUnit(unit, recipe: linkedRecipe)
             return
@@ -1723,6 +1773,27 @@ struct MealItemQuantityEditorSheet: View {
 
         item.unit = unit
         item.servingLabel = ""
+
+        if previousUnit == unit {
+            item.amount = max(minimumAmount(for: unit), previousAmount)
+            syncAmountDraftText()
+            return
+        }
+
+        if unit == .serving {
+            item.amount = 1
+            syncAmountDraftText()
+            return
+        }
+
+        if previousUnit == .serving && unit != .serving {
+            item.amount = defaultAmount(for: unit)
+            syncAmountDraftText()
+            return
+        }
+
+        item.amount = max(minimumAmount(for: unit), previousAmount)
+        syncAmountDraftText()
     }
 
     private func selectRecipeUnit(_ unit: MealItemUnit, recipe: RecipeSummary) {
@@ -1733,16 +1804,17 @@ struct MealItemQuantityEditorSheet: View {
 
         switch (item.unit, unit) {
         case (.serving, .grams):
-            item.amount = defaultAmount(for: unit)
+            item.amount = max(minimumAmount(for: unit), currentAmount * portionWeight)
         case (.grams, .serving):
-            item.amount = max(minimumAmount(for: unit), currentAmount / portionWeight)
+            item.amount = 1
         default:
-            item.amount = max(minimumAmount(for: unit), currentAmount)
+            item.amount = unit == .serving ? 1 : max(minimumAmount(for: unit), currentAmount)
         }
 
         item.unit = unit
         item.servingLabel = ""
         applyRecipeNutrition(recipe, unit: unit)
+        syncAmountDraftText()
     }
 
     private func recipePortionWeight(for recipe: RecipeSummary) -> Double {
@@ -1767,27 +1839,32 @@ struct MealItemQuantityEditorSheet: View {
         item.servingLabel = ""
 
         if previousServingOption != nil {
-            item.amount = defaultAmount(for: unit)
+            item.amount = max(minimumAmount(for: unit), previousAmount)
+            syncAmountDraftText()
             return
         }
 
         if previousUnit == unit {
             item.amount = max(minimumAmount(for: unit), previousAmount)
+            syncAmountDraftText()
             return
         }
 
         if previousUnit != .serving {
             item.amount = max(minimumAmount(for: unit), previousAmount)
+            syncAmountDraftText()
             return
         }
 
         item.amount = defaultAmount(for: unit)
+        syncAmountDraftText()
     }
 
     private func selectServingOption(_ option: ProductServingOption) {
         item.unit = option.effectiveMetricUnit
         item.amount = option.effectiveMetricAmount
         item.servingLabel = option.selectionLabel
+        syncAmountDraftText()
     }
 
     private func defaultAmount(for unit: MealItemUnit) -> Double {
@@ -1802,10 +1879,71 @@ struct MealItemQuantityEditorSheet: View {
     private func normalizeDefaultMetricUnitIfNeeded() {
         guard let linkedProduct else { return }
         let trimmedLabel = item.servingLabel.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedLabel.isEmpty, item.unit == .serving else { return }
-
         let fallbackUnit = linkedProduct.baseNutritionUnit
+
+        if trimmedLabel.isEmpty {
+            guard item.unit != fallbackUnit || item.unit == .serving else { return }
+            item.unit = fallbackUnit
+            item.servingLabel = ""
+            item.amount = max(minimumAmount(for: fallbackUnit), item.amount > 0 ? item.amount : defaultAmount(for: fallbackUnit))
+            syncAmountDraftText()
+            return
+        }
+
+        guard item.unit == .serving else { return }
         item.unit = fallbackUnit
         item.amount = max(minimumAmount(for: fallbackUnit), defaultAmount(for: fallbackUnit))
+        syncAmountDraftText()
+    }
+
+    private func syncAmountDraftText() {
+        amountDraftText = amountText(for: displayAmount)
+    }
+
+    private func commitAmountDraftText() {
+        let parsedAmount = resolvedDoubleValue(from: amountDraftText)
+        applyAmount(parsedAmount > 0 ? parsedAmount : minimumDisplayAmount)
+    }
+
+    private func sanitizedDecimalText(_ text: String) -> String {
+        let decimalSeparator = Locale.current.decimalSeparator ?? "."
+        let alternateSeparator = decimalSeparator == "," ? "." : ","
+
+        var result = ""
+        var hasSeparator = false
+        for character in text {
+            if character.isNumber {
+                result.append(character)
+                continue
+            }
+
+            let scalar = String(character)
+            if scalar == decimalSeparator || scalar == alternateSeparator {
+                guard !hasSeparator else { continue }
+                hasSeparator = true
+                result.append(decimalSeparator)
+            }
+        }
+
+        return result
+    }
+
+    private func resolvedDoubleValue(from text: String) -> Double {
+        let sanitized = sanitizedDecimalText(text)
+        guard !sanitized.isEmpty else { return 0 }
+
+        let formatter = NumberFormatter()
+        formatter.locale = .current
+        formatter.numberStyle = .decimal
+        if let number = formatter.number(from: sanitized) {
+            return number.doubleValue
+        }
+
+        let decimalSeparator = Locale.current.decimalSeparator ?? "."
+        let normalized = sanitized.replacingOccurrences(of: decimalSeparator, with: ".")
+        if normalized.hasPrefix(".") {
+            return Double("0\(normalized)") ?? 0
+        }
+        return Double(normalized) ?? 0
     }
 }

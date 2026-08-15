@@ -3,7 +3,6 @@ import SwiftUI
 struct SharedMealTemplateImportSheet: View {
     @EnvironmentObject private var catalogService: FoodCatalogService
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
 
     let shareReference: String
     let onImportComplete: (() -> Void)?
@@ -12,18 +11,6 @@ struct SharedMealTemplateImportSheet: View {
     @State private var existingMealTemplate: MealTemplateSummary?
     @State private var isLoading = false
     @State private var errorMessage: String?
-
-    private var importButtonBackground: Color {
-        colorScheme == .dark ? Color.white.opacity(0.96) : .black
-    }
-
-    private var importButtonForeground: Color {
-        colorScheme == .dark ? .black : .white
-    }
-
-    private var importButtonBorder: Color {
-        colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.08)
-    }
 
     private var mealTemplateAlreadyExistsMessage: String {
         NSLocalizedString(
@@ -87,14 +74,10 @@ struct SharedMealTemplateImportSheet: View {
             .task(id: shareReference) {
                 loadPreview()
             }
-
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    PressableIconButton(action: { dismiss() }) {
-                        Label("common.close", systemImage: "xmark")
-                            .labelStyle(.iconOnly)
-                            .frame(width: 44, height: 44)
-                    }
+                    Button(role: .close) { dismiss() }
+                        .tint(.primary)
                 }
             }
         }
@@ -131,86 +114,78 @@ struct SharedMealTemplateImportSheet: View {
     private func content(_ mealTemplate: MealTemplateSummary) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
-                headerSection(mealTemplate)
-                itemsSection(mealTemplate)
-                nutritionSection(mealTemplate)
+                identityCard(mealTemplate)
+                itemsCard(mealTemplate)
+                nutritionFactsCard(mealTemplate)
                 statusSection
                 importButtonSection
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
+            .eoCardInsets()
+            .padding(.top, 12)
             .padding(.bottom, 24)
         }
     }
 
-    private func headerSection(_ mealTemplate: MealTemplateSummary) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(mealTemplate.title)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if !mealTemplate.details.isEmpty {
-                Text(mealTemplate.details)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+    private func identityCard(_ mealTemplate: MealTemplateSummary) -> some View {
+        EOCard {
+            EOListRow(title: Text(verbatim: mealTemplate.title))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
     }
 
-    private func itemsSection(_ mealTemplate: MealTemplateSummary) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("addmeal.section.items")
+    private func itemsCard(_ mealTemplate: MealTemplateSummary) -> some View {
+        EOCard {
+            EOCardTitleRow(title: Text("mealtemplate.detail.items"))
 
-            VStack(spacing: 0) {
-                ForEach(Array(mealTemplate.items.enumerated()), id: \.element.id) { index, item in
-                    HStack(alignment: .center, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.name)
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Text(amountText(for: item))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        Text(String(format: NSLocalizedString("today.kcal_value", comment: "Calories value"), item.calories))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                    .padding(.vertical, 12)
-
-                    if index < mealTemplate.items.count - 1 {
-                        divider
-                    }
+            if mealTemplate.items.isEmpty {
+                EORowSeparator()
+                EOListRow(
+                    title: Text("mealtemplate.detail.empty_items"),
+                    titleColor: .secondary
+                )
+            } else {
+                ForEach(mealTemplate.items) { item in
+                    EORowSeparator()
+                    EOListRow(
+                        title: Text(verbatim: item.name),
+                        subtitle: Text(verbatim: itemMetaText(item))
+                    )
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
         }
     }
 
-    private func nutritionSection(_ mealTemplate: MealTemplateSummary) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("recipe.detail.nutrition")
+    private func nutritionFactsCard(_ mealTemplate: MealTemplateSummary) -> some View {
+        let nutritionFactsTitle = NSLocalizedString(
+            "nutrition.facts.title",
+            tableName: nil,
+            bundle: .main,
+            value: "Nutrition Facts",
+            comment: "Nutrition facts table title"
+        )
+        let caloriesUnit = NSLocalizedString("diary.kcal", comment: "Kilocalories")
+        let gramsUnit = NSLocalizedString("unit.grams.short", comment: "Grams")
 
-            NutritionFactsTableCard(
-                headerTitle: NSLocalizedString("addmeal.section.total", comment: "Total nutrition card title"),
-                summary: NutritionSummary(
-                    calories: mealTemplate.calories,
-                    protein: mealTemplate.protein,
-                    fat: mealTemplate.fat,
-                    carbs: mealTemplate.carbs
-                )
+        return EOCard {
+            EOCardTitleRow(title: Text(verbatim: nutritionFactsTitle))
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.total.calories"),
+                accessory: .value(Text(verbatim: "\(mealTemplate.calories) \(caloriesUnit)"))
+            )
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.total.protein"),
+                accessory: .value(Text(verbatim: "\(mealTemplate.protein) \(gramsUnit)"))
+            )
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.total.carbs"),
+                accessory: .value(Text(verbatim: "\(mealTemplate.carbs) \(gramsUnit)"))
+            )
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.total.fat"),
+                accessory: .value(Text(verbatim: "\(mealTemplate.fat) \(gramsUnit)"))
             )
         }
     }
@@ -233,24 +208,19 @@ struct SharedMealTemplateImportSheet: View {
             PressableIconButton(disabled: isLoading, action: importMealTemplate) {
                 if isLoading {
                     ProgressView()
-                        .tint(importButtonForeground)
+                        .tint(Color.appAccentReadableText)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .frame(height: 52)
                 } else {
                     Label(importActionTitle, systemImage: "plus.circle.fill")
                         .labelStyle(.titleAndIcon)
                         .font(.headline)
-                        .foregroundStyle(importButtonForeground)
+                        .foregroundStyle(Color.appAccentReadableText)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .frame(height: 52)
                 }
             }
-            .background(importButtonBackground)
-            .overlay(
-                RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous)
-                    .stroke(importButtonBorder, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
+            .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .opacity(isLoading ? 0.6 : 1)
         }
     }
@@ -338,31 +308,9 @@ struct SharedMealTemplateImportSheet: View {
         )
     }
 
-    private func nutritionComparisonRow(title: String, value: String) -> some View {
-        HStack(spacing: 16) {
-            Text(title)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            NutritionValueText(value: value)
-                .frame(minWidth: 72, alignment: .trailing)
-        }
-        .padding(.vertical, 10)
-    }
-
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.08))
-            .frame(height: 1)
-    }
-
-    private func sectionTitle(_ title: LocalizedStringKey) -> some View {
-        Text(title)
-            .font(.system(size: 23, weight: .bold, design: .rounded))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 2)
+    private func itemMetaText(_ item: MealItemEntry) -> String {
+        let amountText = amountText(for: item)
+        return "\(amountText) - \(item.calories)kc - \(item.protein)p - \(item.carbs)c - \(item.fat)f"
     }
 
     private func gramsText(_ value: Int) -> String {

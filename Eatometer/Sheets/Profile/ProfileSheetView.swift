@@ -1434,12 +1434,6 @@ struct NotificationInboxView: View {
     @State private var selectedIDs: Set<String> = []
     @State private var showRemoveSelectedConfirmation = false
 
-    private let expandedBodyThreshold = 160
-
-    private var markAllReadIconName: String {
-        "checkmark"
-    }
-
     private var titleText: String {
         NSLocalizedString(
             "profile.notifications.inbox.title",
@@ -1615,6 +1609,14 @@ struct NotificationInboxView: View {
         .sheet(item: $readerItem) { item in
             NotificationReaderSheet(
                 item: item,
+                onMarkAsRead: {
+                    markNotificationAsReadWithoutAnimation(item.id)
+                    if readerItem?.id == item.id {
+                        var updated = item
+                        updated.isRead = true
+                        readerItem = updated
+                    }
+                },
                 onOpenRelated: item.hasNavigationTarget ? {
                     pushNotificationService.openInboxItem(item)
                 } : nil
@@ -1777,17 +1779,8 @@ struct NotificationInboxView: View {
         )
     }
 
-    private func notificationNeedsReader(_ item: AppNotificationInboxItem) -> Bool {
-        item.body.trimmingCharacters(in: .whitespacesAndNewlines).count > expandedBodyThreshold
-    }
-
     private func openNotificationReader(_ item: AppNotificationInboxItem) {
-        var resolvedItem = item
-        if !item.isRead {
-            markNotificationAsReadWithoutAnimation(item.id)
-            resolvedItem.isRead = true
-        }
-        readerItem = resolvedItem
+        readerItem = item
     }
 
     private func markNotificationAsReadWithoutAnimation(_ id: String) {
@@ -1853,7 +1846,9 @@ private struct NotificationReaderSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let item: AppNotificationInboxItem
+    let onMarkAsRead: (() -> Void)?
     let onOpenRelated: (() -> Void)?
+    @State private var isRead: Bool
 
     private var readerText: String? {
         let preferredText = item.newsText?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1865,83 +1860,163 @@ private struct NotificationReaderSheet: View {
         return fallbackText.isEmpty ? nil : fallbackText
     }
 
+    init(
+        item: AppNotificationInboxItem,
+        onMarkAsRead: (() -> Void)? = nil,
+        onOpenRelated: (() -> Void)? = nil
+    ) {
+        self.item = item
+        self.onMarkAsRead = onMarkAsRead
+        self.onOpenRelated = onOpenRelated
+        _isRead = State(initialValue: item.isRead)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text(item.title.isEmpty ? fallbackTitle : item.title)
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(.primary)
-
-                    Text(relativeDateText)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-
-                    if let readerText {
-                        Text(readerText)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    if let onOpenRelated {
-                        PressableIconButton(tintColor: .accentColor, action: {
-                            Task { @MainActor in
-                                dismiss()
-                                try? await Task.sleep(nanoseconds: 220_000_000)
-                                onOpenRelated()
-                            }
-                        }) {
-                            HStack(spacing: 8) {
-                                Image(systemName: openRelatedImageName)
-                                    .font(.body.weight(.bold))
-                                Text(openRelatedTitle)
-                                    .font(.body.weight(.semibold))
-                            }
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .padding(.horizontal, 24)
-                        }
-                        .padding(.top, 4)
-                    }
+                VStack(alignment: .leading, spacing: EOTheme.Metrics.sectionSpacing) {
+                    readerCard
+                        .padding(.top, 6)
+                        .frame(maxWidth: .infinity, alignment: .top)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
-                .background(Color.platformSystemBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
-                .padding(20)
+                .eoCardInsets()
+                .padding(.top, 12)
+                .padding(.bottom, 24)
             }
-            .background(Color.platformSystemGroupedBackground.ignoresSafeArea())
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    PressableIconButton(tintColor: .primary, action: { dismiss() }) {
-                        Label("common.close", systemImage: "xmark")
-                            .labelStyle(.iconOnly)
-                            .foregroundStyle(.primary)
-                            .frame(width: 44, height: 44)
-                    }
+            .eoPageBackground()
+            .eoSheetChrome(
+                title: Text(
+                    NSLocalizedString(
+                        "profile.notifications.fallback.generic",
+                        tableName: nil,
+                        bundle: .main,
+                        value: "Notification",
+                        comment: "Notification reader sheet title"
+                    )
+                ),
+                onClose: { dismiss() }
+            ) {
+                Button {
+                    guard !isRead else { return }
+                    onMarkAsRead?()
+                    isRead = true
+                } label: {
+                    Image(systemName: "checkmark")
                 }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.circle)
+                .tint(isRead ? Color.secondary.opacity(0.35) : EOTheme.Palette.accent)
+                .disabled(isRead)
             }
         }
         .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.hidden)
+        .presentationDragIndicator(.visible)
+    }
+
+    private var readerCard: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(verbatim: displayTitle)
+                    .font(.title3.weight(.regular))
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(verbatim: subtitleText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, EOTheme.Metrics.cardInset)
+            .padding(.top, EOTheme.Metrics.cardInset)
+            .padding(.bottom, 16)
+
+            if let displayMessageText {
+                EORowSeparator()
+
+                Text(displayMessageText)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, EOTheme.Metrics.cardInset)
+                    .padding(.vertical, 18)
+                    .frame(minHeight: 88, alignment: .topLeading)
+            }
+
+            if let onOpenRelated {
+                EORowSeparator()
+
+                Button {
+                    Task { @MainActor in
+                        dismiss()
+                        try? await Task.sleep(nanoseconds: 220_000_000)
+                        onOpenRelated()
+                    }
+                } label: {
+                    Text(openRelatedTitle)
+                        .font(.body.weight(.regular))
+                        .foregroundStyle(EOTheme.Palette.accent)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous)
+                .fill(EOTheme.Palette.card)
+        )
+        .clipShape(
+            RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous)
+        )
     }
 
     private var openRelatedTitle: String {
         NSLocalizedString(
-            isMealNavigationTarget ? "profile.notifications.open_meal" : "profile.notifications.open_related",
+            isMealNavigationTarget ? "profile.notifications.open_meal_sheet" : "profile.notifications.open_related",
             tableName: nil,
             bundle: .main,
-            value: isMealNavigationTarget ? "Log" : "Go",
+            value: isMealNavigationTarget ? "Open meal" : "Go",
             comment: "Open related screen from notification"
         )
     }
 
-    private var openRelatedImageName: String {
-        isMealNavigationTarget ? "plus.circle.fill" : "arrow.right.circle.fill"
+    private var displayTitle: String {
+        if isMealNavigationTarget {
+            return NSLocalizedString(
+                "profile.notifications.meal_reminder.title",
+                tableName: nil,
+                bundle: .main,
+                value: "Meal reminder",
+                comment: "Notification reader title for meal reminders"
+            )
+        }
+
+        return item.title.isEmpty ? fallbackTitle : item.title
+    }
+
+    private var displayMessageText: String? {
+        if isMealNavigationTarget {
+            return NSLocalizedString(
+                "profile.notifications.meal_reminder.message",
+                tableName: nil,
+                bundle: .main,
+                value: "Don't forget to log what you ate.",
+                comment: "Notification reader message for meal reminders"
+            )
+        }
+
+        return readerText
+    }
+
+    private var subtitleText: String {
+        let calendar = Calendar.autoupdatingCurrent
+        if calendar.isDateInToday(item.receivedAt) {
+            return item.receivedAt.formatted(date: .omitted, time: .shortened)
+        }
+
+        return item.receivedAt.formatted(date: .abbreviated, time: .shortened)
     }
 
     private var isMealNavigationTarget: Bool {
@@ -1980,10 +2055,4 @@ private struct NotificationReaderSheet: View {
         )
     }
 
-    private var relativeDateText: String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = .autoupdatingCurrent
-        formatter.unitsStyle = .full
-        return formatter.localizedString(for: item.receivedAt, relativeTo: Date())
-    }
 }

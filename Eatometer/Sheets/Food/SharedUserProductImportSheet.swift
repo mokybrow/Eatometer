@@ -3,7 +3,6 @@ import SwiftUI
 struct SharedUserProductImportSheet: View {
     @EnvironmentObject private var catalogService: FoodCatalogService
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
 
     let shareReference: String
     let onImportComplete: (() -> Void)?
@@ -12,18 +11,6 @@ struct SharedUserProductImportSheet: View {
     @State private var existingProduct: ProductSummary?
     @State private var isLoading = false
     @State private var errorMessage: String?
-
-    private var importButtonBackground: Color {
-        colorScheme == .dark ? Color.white.opacity(0.96) : .black
-    }
-
-    private var importButtonForeground: Color {
-        colorScheme == .dark ? .black : .white
-    }
-
-    private var importButtonBorder: Color {
-        colorScheme == .dark ? Color.white.opacity(0.18) : Color.black.opacity(0.08)
-    }
 
     private var alreadyExistsMessage: String {
         NSLocalizedString(
@@ -79,11 +66,8 @@ struct SharedUserProductImportSheet: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    PressableIconButton(action: { dismiss() }) {
-                        Label("common.close", systemImage: "xmark")
-                            .labelStyle(.iconOnly)
-                            .frame(width: 44, height: 44)
-                    }
+                    Button(role: .close) { dismiss() }
+                        .tint(.primary)
                 }
             }
         }
@@ -120,45 +104,101 @@ struct SharedUserProductImportSheet: View {
     private func content(_ product: ProductSummary) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 18) {
-                headerSection(product)
-                nutritionSection(product)
+                identityCard(product)
+                servingOptionsCard(product)
+                nutritionFactsCard(product)
                 statusSection
                 importButtonSection
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
+            .eoCardInsets()
+            .padding(.top, 12)
             .padding(.bottom, 24)
         }
     }
 
-    private func headerSection(_ product: ProductSummary) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(product.name)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-            if !product.brand.isEmpty {
-                Text(product.brand)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+    private func identityCard(_ product: ProductSummary) -> some View {
+        EOCard {
+            EOListRow(title: Text(verbatim: product.name))
+
+            if !product.brand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                EORowSeparator()
+                EOListRow(title: Text(verbatim: product.brand))
             }
-            if !product.details.isEmpty {
-                Text(product.details)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.unit"),
+                accessory: .value(Text(verbatim: product.baseNutritionUnit.title))
+            )
+
+            if let barcode = product.barcode,
+               !barcode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                EORowSeparator()
+                EOListRow(
+                    title: Text("product.editor.barcode"),
+                    accessory: .value(Text(verbatim: barcode))
+                )
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(Color.appCardBackground, in: RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
     }
 
-    private func nutritionSection(_ product: ProductSummary) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("product.detail.per_100g")
+    private func servingOptionsCard(_ product: ProductSummary) -> some View {
+        EOCard {
+            EOCardTitleRow(
+                title: Text(
+                    verbatim: NSLocalizedString(
+                        "product.detail.serving_options",
+                        tableName: nil,
+                        bundle: .main,
+                        value: "Serving options",
+                        comment: "Product detail serving options section title"
+                    )
+                )
+            )
 
-            NutritionFactsTableCard(product: product)
+            ForEach(product.selectableServingOptions) { option in
+                EORowSeparator()
+                EOListRow(
+                    title: Text(verbatim: option.displayTitle),
+                    subtitle: option.metricDescription.map { Text(verbatim: $0) }
+                )
+            }
+        }
+    }
+
+    private func nutritionFactsCard(_ product: ProductSummary) -> some View {
+        let nutritionFactsTitle = NSLocalizedString(
+            "nutrition.facts.title",
+            tableName: nil,
+            bundle: .main,
+            value: "Nutrition Facts",
+            comment: "Nutrition facts table title"
+        )
+        let gramsUnit = NSLocalizedString("unit.grams.short", comment: "Grams")
+        let caloriesUnit = NSLocalizedString("diary.kcal", comment: "Calories suffix")
+
+        return EOCard {
+            EOCardTitleRow(title: Text(verbatim: nutritionFactsTitle))
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.total.calories"),
+                accessory: .value(Text(verbatim: "\(product.caloriesPer100g) \(caloriesUnit)"))
+            )
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.total.protein"),
+                accessory: .value(Text(verbatim: "\(product.proteinPer100g) \(gramsUnit)"))
+            )
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.total.carbs"),
+                accessory: .value(Text(verbatim: "\(product.carbsPer100g) \(gramsUnit)"))
+            )
+            EORowSeparator()
+            EOListRow(
+                title: Text("addmeal.total.fat"),
+                accessory: .value(Text(verbatim: "\(product.fatPer100g) \(gramsUnit)"))
+            )
         }
     }
 
@@ -180,24 +220,19 @@ struct SharedUserProductImportSheet: View {
             PressableIconButton(disabled: isLoading, action: importProduct) {
                 if isLoading {
                     ProgressView()
-                        .tint(importButtonForeground)
+                        .tint(Color.appAccentReadableText)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .frame(height: 52)
                 } else {
                     Label(importActionTitle, systemImage: "plus.circle.fill")
                         .labelStyle(.titleAndIcon)
                         .font(.headline)
-                        .foregroundStyle(importButtonForeground)
+                        .foregroundStyle(Color.appAccentReadableText)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                        .frame(height: 52)
                 }
             }
-            .background(importButtonBackground)
-            .overlay(
-                RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous)
-                    .stroke(importButtonBorder, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: EOTheme.Metrics.cardRadius, style: .continuous))
+            .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .opacity(isLoading ? 0.6 : 1)
         }
     }
@@ -265,38 +300,4 @@ struct SharedUserProductImportSheet: View {
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 
-    private func nutritionComparisonRow(title: String, value: String) -> some View {
-        HStack(spacing: 16) {
-            Text(title)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            NutritionValueText(value: value)
-                .frame(minWidth: 72, alignment: .trailing)
-        }
-        .padding(.vertical, 10)
-    }
-
-    private var divider: some View {
-        Rectangle()
-            .fill(Color.primary.opacity(0.08))
-            .frame(height: 1)
-    }
-
-    private func sectionTitle(_ title: LocalizedStringKey) -> some View {
-        Text(title)
-            .font(.system(size: 23, weight: .bold, design: .rounded))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 2)
-    }
-
-    private func gramsText(_ value: Int) -> String {
-        String(format: NSLocalizedString("recipe.grams_value", comment: "Grams value"), value)
-    }
-
-    private func gramsText(_ value: Double) -> String {
-        String(format: NSLocalizedString("recipe.grams_value", comment: "Grams value"), Int(value.rounded()))
-    }
 }

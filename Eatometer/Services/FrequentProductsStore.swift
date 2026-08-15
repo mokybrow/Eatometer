@@ -53,6 +53,12 @@ final class FrequentProductsStore: ObservableObject {
         products = []
     }
 
+    func remove(_ productID: UUID) {
+        guard entries.removeValue(forKey: productID) != nil else { return }
+        persist()
+        products = Self.topProducts(from: entries, limit: displayLimit, minCount: minCount)
+    }
+
     private func prune() {
         guard entries.count > maxStored else { return }
         let survivors = entries.values.sorted(by: Self.moreRelevant).prefix(maxStored)

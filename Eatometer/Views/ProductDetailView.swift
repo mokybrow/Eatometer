@@ -16,6 +16,7 @@ struct ProductDetailView: View {
     @State private var showsAdditionalNutrition = false
     @State private var sharePayload: FoodSharePayload?
     @State private var reviewSubmission: ProductSubmissionSummary?
+    @State private var showsDeleteErrorAlert = false
 
     private struct NutrientDetail: Identifiable {
         let id: String
@@ -211,6 +212,17 @@ struct ProductDetailView: View {
             ProductEditorSheet(state: state)
                 .environmentObject(catalogService)
         }
+        .alert(
+            Text("common.error"),
+            isPresented: $showsDeleteErrorAlert,
+            presenting: catalogService.lastErrorMessage?.trimmingCharacters(in: .whitespacesAndNewlines)
+        ) { _ in
+            Button("common.ok", role: .cancel) {
+                catalogService.lastErrorMessage = nil
+            }
+        } message: { message in
+            Text(verbatim: message)
+        }
     }
 
     private func deleteProduct() {
@@ -218,6 +230,10 @@ struct ProductDetailView: View {
             let success = await catalogService.deleteProduct(id: product.id)
             if success {
                 await MainActor.run { dismiss() }
+            } else {
+                await MainActor.run {
+                    showsDeleteErrorAlert = !(catalogService.lastErrorMessage?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+                }
             }
         }
     }

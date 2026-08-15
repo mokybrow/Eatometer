@@ -22,7 +22,7 @@ struct EatometerApp: App {
         let catalog = FoodCatalogService(authService: auth)
         let diary = FoodDiaryService(authService: auth, catalogService: catalog)
         let habits = HabitsService(authService: auth)
-        let deepLinkRouter = DeepLinkRouter()
+        let deepLinkRouter = DeepLinkRouter.shared
         let user = UserService(authService: auth)
         _appSettings = StateObject(wrappedValue: settings)
         _authService = StateObject(wrappedValue: auth)

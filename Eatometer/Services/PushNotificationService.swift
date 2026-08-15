@@ -25,7 +25,11 @@ struct AppNotificationInboxItem: Identifiable, Codable, Hashable, Sendable {
         let type = notificationType?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let screen = targetScreen?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        if type == "water_log_reminder" || screen == "today" {
+        if isMealReminder {
+            return diaryDestinationURL
+        }
+
+        if type == "water_log_reminder" {
             return URL(string: "eatometer://water")
         }
 
@@ -36,6 +40,8 @@ struct AppNotificationInboxItem: Identifiable, Codable, Hashable, Sendable {
         switch screen {
         case "diary":
             return diaryDestinationURL
+        case "today":
+            return URL(string: "eatometer://water")
         case "water":
             return URL(string: "eatometer://water")
         case "habits", "habit":
@@ -43,6 +49,19 @@ struct AppNotificationInboxItem: Identifiable, Codable, Hashable, Sendable {
         default:
             return nil
         }
+    }
+
+    private var isMealReminder: Bool {
+        if hasText(mealID) || hasText(mealSlotID) {
+            return true
+        }
+
+        guard let type = notificationType?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !type.isEmpty else {
+            return false
+        }
+
+        return type.contains("meal")
     }
 
     private var diaryDestinationURL: URL? {
@@ -148,6 +167,11 @@ struct AppNotificationInboxItem: Identifiable, Codable, Hashable, Sendable {
         }
 
         return nil
+    }
+
+    private func hasText(_ value: String?) -> Bool {
+        guard let value else { return false }
+        return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
 

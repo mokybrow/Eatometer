@@ -113,12 +113,8 @@ struct TodayView: View {
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 ToolbarItemGroup(placement: .platformTopBarTrailing) {
-                    Button {
+                    NotificationBellButton {
                         isNotificationsPresented = true
-                    } label: {
-                        Label("profile.notifications.inbox.title", systemImage: "bell")
-                            .labelStyle(.iconOnly)
-                            .foregroundStyle(.primary)
                     }
                 }
             }
@@ -156,6 +152,7 @@ struct TodayView: View {
             .sheet(item: $presentedMealViewer) { viewer in
                 MealEntryViewerSheet(
                     title: viewer.meal.title,
+                    scheduledAt: viewer.meal.scheduledAt,
                     items: viewer.meal.items,
                     nutrition: NutritionSummary(
                         calories: viewer.meal.calories,
@@ -496,30 +493,26 @@ struct TodayView: View {
     private func shareMeal(_ meal: MealEntry) {
         Task {
             guard let payload = await diaryService.shareMeal(id: meal.id),
-                  let link = payload.resolvedShareLink else { return }
+                  let url = payload.resolvedShareURL else { return }
 
-            if let url = payload.resolvedShareURL {
-                pendingShareSheetItem = SystemShareSheetItem(
-                    message: payload.localizedShareMessage,
-                    url: url,
-                    card: .make(
-                        title: meal.title,
-                        kindKey: "share.card.kind.meal",
-                        items: meal.items,
-                        // Accessors, not the stored field: it is zero whenever
-                        // the totals never came back, and they fall back to
-                        // summing the items.
-                        nutrition: NutritionSummary(
-                            calories: meal.calories,
-                            protein: meal.protein,
-                            fat: meal.fat,
-                            carbs: meal.carbs
-                        )
+            pendingShareSheetItem = SystemShareSheetItem(
+                message: payload.localizedShareMessage,
+                url: url,
+                card: .make(
+                    title: meal.title,
+                    kindKey: "share.card.kind.meal",
+                    items: meal.items,
+                    // Accessors, not the stored field: it is zero whenever
+                    // the totals never came back, and they fall back to
+                    // summing the items.
+                    nutrition: NutritionSummary(
+                        calories: meal.calories,
+                        protein: meal.protein,
+                        fat: meal.fat,
+                        carbs: meal.carbs
                     )
                 )
-            } else {
-                pendingShareSheetItem = SystemShareSheetItem(message: payload.localizedShareMessage, text: link)
-            }
+            )
         }
     }
 

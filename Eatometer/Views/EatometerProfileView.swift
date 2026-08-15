@@ -148,13 +148,9 @@ struct EatometerProfileView: View {
         .toolbarTitleDisplayMode(.inlineLarge)
         .toolbar {
             ToolbarItem(placement: .platformTopBarTrailing) {
-                Button {
+                NotificationBellButton {
                     isNotificationsPresented = true
-                } label: {
-                    Image(systemName: "bell")
-                        .foregroundStyle(.primary)
                 }
-                .accessibilityLabel(Text("profile.notifications.inbox.title"))
             }
         }
         .navigationDestination(for: EatometerProfileRoute.self) { route in

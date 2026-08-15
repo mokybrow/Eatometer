@@ -640,6 +640,10 @@ final class FoodCatalogService: ObservableObject {
                 productSharePayloads.removeValue(forKey: id)
                 productShareTasks[id]?.cancel()
                 productShareTasks.removeValue(forKey: id)
+                favoriteProductIDs.remove(id)
+                favoriteProductSummaries.removeAll { $0.id == id }
+                FrequentProductsStore.shared.remove(id)
+                persistFavorites()
                 persistCatalogSnapshot()
             }
             lastErrorMessage = nil
@@ -1358,6 +1362,30 @@ final class FoodCatalogService: ObservableObject {
             lastErrorMessage = nil
             return
         }
+
+        if let rpcError = error as? RPCError {
+            let message = rpcError.message.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !message.isEmpty, !Self.isTechnicalErrorMessage(message) {
+                lastErrorMessage = message
+                return
+            }
+        }
+
+        if let localizedError = error as? LocalizedError,
+           let description = localizedError.errorDescription,
+           !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !Self.isTechnicalErrorMessage(description) {
+            lastErrorMessage = description
+            return
+        }
+
+        if let description = nsError.userInfo[NSLocalizedDescriptionKey] as? String,
+           !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !Self.isTechnicalErrorMessage(description) {
+            lastErrorMessage = description
+            return
+        }
+
         lastErrorMessage = Self.genericUserFacingErrorMessage
     }
 
@@ -1369,6 +1397,20 @@ final class FoodCatalogService: ObservableObject {
             value: "Something went wrong. Try again.",
             comment: "Generic food service error"
         )
+    }
+
+    private static func isTechnicalErrorMessage(_ message: String) -> Bool {
+        let normalized = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return true }
+
+        let lowercased = normalized.lowercased()
+        return lowercased.contains("grpc")
+            || lowercased.contains("http")
+            || lowercased.contains("transport")
+            || lowercased.contains("deadline exceeded")
+            || lowercased.contains("cancelled")
+            || lowercased.contains("unauthenticated")
+            || lowercased.contains("permission denied")
     }
 
     func productSummary(id: UUID) -> ProductSummary? {

@@ -214,7 +214,12 @@ private func productIcon(_ product: ProductSummary) -> (String, Color) {
 private func recipeSubtitle(_ recipe: RecipeSummary) -> String {
     let kcal = NSLocalizedString("diary.kcal", comment: "Calories suffix")
     let perServing = NSLocalizedString("recipe.editor.per_serving", comment: "Per serving")
-    return "\(recipe.caloriesPerServing) \(kcal) · \(perServing)"
+    let per100g = NSLocalizedString("recipe.editor.per_100g", comment: "Per 100g")
+    let per100gCalories = recipe.resolvedNutritionPer100g.calories
+    let displayedCalories = recipe.caloriesPerServing > 0 ? recipe.caloriesPerServing : per100gCalories
+    let suffix = recipe.caloriesPerServing > 0 ? perServing : per100g
+    guard displayedCalories > 0 else { return perServing }
+    return "\(displayedCalories) \(kcal) · \(suffix)"
 }
 
 private func mealSubtitle(_ meal: MealTemplateSummary) -> String {

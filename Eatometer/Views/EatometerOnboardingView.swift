@@ -445,15 +445,20 @@ struct EatometerOnboardingView: View {
 
     private func saveProfile() async {
         let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        let onboardingGoal = DailyNutritionGoal(
+            calories: recommendedCalories,
+            proteinPercent: 20,
+            fatPercent: 35,
+            carbsPercent: 45
+        )
+        let onboardingMealCategories = diaryService.visibleMealCategories.isEmpty
+            ? MealCategory.default
+            : diaryService.visibleMealCategories
 
         appSettings.setWaterTrackingEnabled(true)
-        diaryService.setDailyGoal(
-            DailyNutritionGoal(
-                calories: recommendedCalories,
-                proteinPercent: 20,
-                fatPercent: 35,
-                carbsPercent: 45
-            )
+        await diaryService.applyOnboardingNutritionSetup(
+            goal: onboardingGoal,
+            mealCategories: onboardingMealCategories
         )
         await diaryService.updateEatometerProfile(
             heightCentimeters: height,

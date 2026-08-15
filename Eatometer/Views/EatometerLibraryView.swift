@@ -49,16 +49,32 @@ struct EatometerLibraryView: View {
         .toolbarTitleDisplayMode(.inlineLarge)
         .toolbar {
             ToolbarItemGroup(placement: .platformTopBarTrailing) {
-                Button {
+                NotificationBellButton {
                     isNotificationsPresented = true
-                } label: {
-                    Image(systemName: "bell")
-                        .foregroundStyle(.primary)
                 }
-                .accessibilityLabel(Text("profile.notifications.inbox.title"))
 
                 addMenu
             }
+        }
+        .alert(
+            Text("common.error"),
+            isPresented: Binding(
+                get: {
+                    let message = catalogService.lastErrorMessage?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    return !message.isEmpty
+                },
+                set: { isPresented in
+                    if !isPresented {
+                        catalogService.lastErrorMessage = nil
+                    }
+                }
+            )
+        ) {
+            Button("common.ok", role: .cancel) {
+                catalogService.lastErrorMessage = nil
+            }
+        } message: {
+            Text(verbatim: catalogService.lastErrorMessage ?? "")
         }
         .navigationDestination(isPresented: $isNotificationsPresented) {
             NotificationInboxView()
@@ -202,7 +218,7 @@ struct EatometerLibraryView: View {
                 } label: {
                     row(
                         title: recipe.title,
-                        subtitle: "\(recipe.caloriesPerServing) \(NSLocalizedString("diary.kcal", comment: "Calories"))"
+                        subtitle: recipeListSubtitle(recipe)
                     )
                 }
                 .buttonStyle(.plain)
@@ -266,6 +282,16 @@ struct EatometerLibraryView: View {
             subtitle: subtitle.isEmpty ? nil : Text(verbatim: subtitle),
             accessory: .chevron
         )
+    }
+
+    private func recipeListSubtitle(_ recipe: RecipeSummary) -> String {
+        let caloriesUnit = NSLocalizedString("diary.kcal", comment: "Calories suffix")
+        let perServingTitle = NSLocalizedString("recipe.editor.per_serving", comment: "Per serving")
+        let per100gCalories = recipe.resolvedNutritionPer100g.calories
+        let displayedCalories = recipe.caloriesPerServing > 0 ? recipe.caloriesPerServing : per100gCalories
+        let suffix = recipe.caloriesPerServing > 0 ? perServingTitle : NSLocalizedString("recipe.editor.per_100g", comment: "Per 100g")
+        guard displayedCalories > 0 else { return perServingTitle }
+        return "\(displayedCalories) \(caloriesUnit) · \(suffix)"
     }
 
     private var addMenu: some View {

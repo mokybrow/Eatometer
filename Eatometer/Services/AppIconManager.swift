@@ -79,6 +79,7 @@ final class AppIconManager: ObservableObject {
 
 struct AppIconPickerView: View {
     @StateObject private var manager = AppIconManager.shared
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -123,6 +124,7 @@ struct AppIconPickerView: View {
         return HStack(spacing: 14) {
             Image(option.previewImageName)
                 .resizable()
+                .id("\(option.id)-\(colorScheme == .dark ? "dark" : "light")")
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 36, height: 36)
                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))

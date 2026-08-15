@@ -219,6 +219,9 @@ struct ContentView: View {
         .task {
             await handlePendingPushDeepLinkIfNeeded()
         }
+        .task(id: shortcutHandlingTrigger) {
+            await handlePendingShortcutIfNeeded()
+        }
         .onChange(of: pushNotificationService.pendingDeepLinkURL) { _, _ in
             Task { @MainActor in
                 await handlePendingPushDeepLinkIfNeeded()
@@ -252,6 +255,13 @@ struct ContentView: View {
         [
             authService.isAuthenticated ? "auth" : "guest",
             diaryService.hasResolvedCalorieOnboardingState ? "resolved" : "pending"
+        ].joined(separator: ":")
+    }
+
+    private var shortcutHandlingTrigger: String {
+        [
+            authService.isAuthenticated ? "auth" : "guest",
+            deepLinkRouter.pendingShortcutAction?.rawValue ?? "none"
         ].joined(separator: ":")
     }
 
@@ -785,6 +795,27 @@ struct ContentView: View {
         }
         handleIncomingURL(url)
         deepLinkRouter.clear()
+    }
+
+    private func handlePendingShortcutIfNeeded() async {
+        guard authService.isAuthenticated,
+              let action = deepLinkRouter.pendingShortcutAction else {
+            return
+        }
+
+        deepLinkRouter.pendingShortcutAction = nil
+        authService.showProfile = false
+
+        switch action {
+        case .addWater:
+            if let url = URL(string: "eatometer://water") {
+                handleIncomingURL(url)
+            }
+        case .newRecipe:
+            selectedTab = .library
+            librarySection = .recipes
+            catalogService.presentRecipeEditor(draft: RecipeDraft())
+        }
     }
 
     private func habitID(from components: URLComponents) -> UUID? {

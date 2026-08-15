@@ -12,14 +12,22 @@ struct PendingMealQuickAdd: Hashable {
     let id: UUID
 }
 
+enum AppShortcutAction: String, Sendable {
+    case addWater = "com.goeatometer.Eatometer.add-water"
+    case newRecipe = "com.goeatometer.Eatometer.new-recipe"
+}
+
 @MainActor
 final class DeepLinkRouter: ObservableObject {
+    static let shared = DeepLinkRouter()
+
     @Published private(set) var pendingURL: URL?
     @Published var pendingMealID: UUID?
     @Published var pendingMealSlotID: String?
     @Published var pendingMealQuickAdd: PendingMealQuickAdd?
     @Published var pendingOpenWater = false
     @Published var pendingOpenMeals = false
+    @Published var pendingShortcutAction: AppShortcutAction?
     /// Habit to open — the habit detail is a sheet, so it can't be pushed onto
     /// the navigation path like the other destinations.
     @Published var pendingHabitID: UUID?

@@ -888,7 +888,13 @@ extension ProductSummary {
     var resolvedServingOptions: [ProductServingOption] {
         let normalizedOptions: [ProductServingOption]
         if servingOptions.isEmpty {
-            let legacyAmount = max(servingAmount, 1)
+            let rawLegacyAmount = servingAmount > 0 ? servingAmount : 100
+            let legacyAmount: Double
+            if servingUnit != .serving && rawLegacyAmount <= 1.0001 {
+                legacyAmount = 100
+            } else {
+                legacyAmount = max(rawLegacyAmount, 1)
+            }
             if servingUnit == .serving || !approximatelyEqual(legacyAmount, 100) {
                 normalizedOptions = [
                     ProductServingOption(
@@ -1153,13 +1159,6 @@ struct FoodSharePayload: Identifiable, Hashable {
     let previewTitle: String? = nil
     let previewSubtitle: String? = nil
 
-    private static let appShareBaseURL = "eatometer://share"
-    private static let placeholderWebShareHosts: Set<String> = [
-        "goeatometer.com",
-        "www.goeatometer.com",
-        "food.goeatometer.com"
-    ]
-
     var isRecipeShare: Bool {
         shareCode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("rshare")
     }
@@ -1172,22 +1171,27 @@ struct FoodSharePayload: Identifiable, Hashable {
         shareCode.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasPrefix("pshare")
     }
 
+    /// The link to send, which is the one the service made.
+    ///
+    /// The app used to second-guess this: a URL on the web host was treated as a
+    /// placeholder and swapped for `eatometer://share/<code>`. That was why a
+    /// shared meal arrived as a link and a shared product as a scheme nobody
+    /// but the app understands — the two took different branches. A scheme URL
+    /// is also useless to a recipient without the app, which is most of the
+    /// point of sharing.
+    ///
+    /// There is one source of a share link now, and it is the service. When it
+    /// does not give one there is nothing to send, and saying so is better than
+    /// inventing something that will not open.
     var resolvedShareLink: String? {
-        let trimmedShareURL = shareURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedShareURL.isEmpty,
-           let url = URL(string: trimmedShareURL),
-           url.scheme != nil,
-           !Self.isPlaceholderWebShareURL(url) {
-            return trimmedShareURL
+        let trimmed = shareURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "https" || scheme == "http",
+              url.host?.isEmpty == false else {
+            return nil
         }
-
-        let trimmedShareCode = shareCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedShareCode.isEmpty, Self.isKnownShareCode(trimmedShareCode) {
-            let encodedCode = trimmedShareCode.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trimmedShareCode
-            return "\(Self.appShareBaseURL)/\(encodedCode)"
-        }
-
-        return trimmedShareCode.isEmpty ? nil : trimmedShareCode
+        return trimmed
     }
 
     var resolvedShareURL: URL? {
@@ -1199,21 +1203,6 @@ struct FoodSharePayload: Identifiable, Hashable {
         resolvedShareLink
     }
 
-    private static func isKnownShareCode(_ value: String) -> Bool {
-        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return normalized.hasPrefix("rshare")
-            || normalized.hasPrefix("tshare")
-            || normalized.hasPrefix("mshare")
-            || normalized.hasPrefix("pshare")
-    }
-
-    private static func isPlaceholderWebShareURL(_ url: URL) -> Bool {
-        guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
-              let host = url.host?.lowercased() else {
-            return false
-        }
-        return placeholderWebShareHosts.contains(host)
-    }
 
     var localizedShareSubject: String {
         if isRecipeShare {

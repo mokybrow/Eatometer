@@ -9,6 +9,12 @@ final class HabitLocalNotificationScheduler {
     private let manualNotificationPrefix = "habit-manual-check-"
     private let resetNotificationPrefix = "habit-auto-reset-"
     private let waterNotificationPrefix = "water-log-reminder-"
+    private let manualReminderLookaheadDays = 30
+
+    private struct ScheduledManualReminder {
+        let identifier: String
+        let date: Date
+    }
 
     private init() {}
 
@@ -21,16 +27,31 @@ final class HabitLocalNotificationScheduler {
 
         let activeHabitIDs = Set(habits.map(\.id))
         let reminderHabits = habits.filter { habit in
-            !habit.isArchived && habit.trackingMode == .manual
+            !habit.isArchived && habit.trackingMode == .manual && habit.manualReminderEnabled
         }
-        let requestedIdentifiers = Set(reminderHabits.map { notificationIdentifier(for: $0.id) })
+        let schedulesByHabitID = Dictionary(
+            uniqueKeysWithValues: reminderHabits.map { habit in
+                (habit.id, scheduledManualReminders(for: habit))
+            }
+        )
+        let requestedIdentifiers = Set(
+            schedulesByHabitID.values
+                .flatMap { $0 }
+                .map(\.identifier)
+        )
 
         UNUserNotificationCenter.current().getPendingNotificationRequests { [manualNotificationPrefix] requests in
             let staleIdentifiers = requests
                 .map(\.identifier)
                 .filter { identifier in
                     guard identifier.hasPrefix(manualNotificationPrefix) else { return false }
-                    let rawID = String(identifier.dropFirst(manualNotificationPrefix.count))
+                    let rawID = String(
+                        identifier
+                            .dropFirst(manualNotificationPrefix.count)
+                            .split(separator: "-")
+                            .dropLast()
+                            .joined(separator: "-")
+                    )
                     guard let habitID = UUID(uuidString: rawID) else { return true }
                     return !activeHabitIDs.contains(habitID) || !requestedIdentifiers.contains(identifier)
                 }
@@ -40,12 +61,14 @@ final class HabitLocalNotificationScheduler {
         }
 
         for habit in reminderHabits {
-            scheduleReminder(for: habit)
+            for reminder in schedulesByHabitID[habit.id] ?? [] {
+                scheduleReminder(for: habit, reminder: reminder)
+            }
         }
     }
 
     func cancelReminder(for habitID: UUID) {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [notificationIdentifier(for: habitID)])
+        cancelPendingRequests(withPrefix: manualNotificationPrefix + habitID.uuidString + "-")
     }
 
     func refreshWaterReminders(isWaterTrackingEnabled: Bool) {
@@ -134,16 +157,14 @@ final class HabitLocalNotificationScheduler {
         }
     }
 
-    private func scheduleReminder(for habit: Habit) {
-        let identifier = notificationIdentifier(for: habit.id)
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
-
+    private func scheduleReminder(for habit: Habit, reminder: ScheduledManualReminder) {
         Task {
             await PushNotificationService.shared.requestLocalAuthorizationIfNeeded()
 
-            var components = DateComponents()
-            components.hour = 21
-            components.minute = 0
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute, .second],
+                from: reminder.date
+            )
 
             let content = UNMutableNotificationContent()
             content.title = NSLocalizedString(
@@ -169,16 +190,37 @@ final class HabitLocalNotificationScheduler {
             ]
 
             let request = UNNotificationRequest(
-                identifier: identifier,
+                identifier: reminder.identifier,
                 content: content,
-                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+                trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             )
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [reminder.identifier])
             try? await UNUserNotificationCenter.current().add(request)
         }
     }
 
-    private func notificationIdentifier(for habitID: UUID) -> String {
-        manualNotificationPrefix + habitID.uuidString
+    private func scheduledManualReminders(for habit: Habit, now: Date = Date()) -> [ScheduledManualReminder] {
+        guard let attempt = habit.currentAttempt, attempt.isActive else { return [] }
+
+        let firstUpcomingDayIndex = max(0, HabitProgressClock.completedDays(for: attempt, at: now))
+        let maxScheduledDayIndexExclusive = habit.targetDays.map { max(0, $0) } ?? (firstUpcomingDayIndex + manualReminderLookaheadDays)
+        let upperBound = min(maxScheduledDayIndexExclusive, firstUpcomingDayIndex + manualReminderLookaheadDays)
+        guard firstUpcomingDayIndex < upperBound else { return [] }
+
+        return (firstUpcomingDayIndex..<upperBound).compactMap { completedDayIndex in
+            let activationDate = attempt.startedAt.addingTimeInterval(
+                TimeInterval(completedDayIndex + 1) * HabitProgressClock.daySeconds
+            )
+            guard activationDate > now else { return nil }
+            return ScheduledManualReminder(
+                identifier: notificationIdentifier(for: habit.id, completedDayIndex: completedDayIndex),
+                date: activationDate
+            )
+        }
+    }
+
+    private func notificationIdentifier(for habitID: UUID, completedDayIndex: Int) -> String {
+        manualNotificationPrefix + habitID.uuidString + "-\(completedDayIndex)"
     }
 
     private func cancelPendingRequests(withPrefix prefix: String) {
