@@ -1162,7 +1162,7 @@ private struct FriendProfileView: View {
             }
 
             if !catalog.products.isEmpty {
-                visibleCatalogSection(title: NSLocalizedString("favorites.scope.products", comment: "Favorite products section"), items: catalog.products) { product in
+                visibleCatalogSection(title: NSLocalizedString("products.title", comment: "Products section"), items: catalog.products) { product in
                     NavigationLink {
                         ProductDetailView(productID: product.id, initialProduct: product)
                     } label: {
@@ -1179,7 +1179,7 @@ private struct FriendProfileView: View {
             }
 
             if !catalog.recipes.isEmpty {
-                visibleCatalogSection(title: NSLocalizedString("favorites.scope.recipes", comment: "Favorite recipes section"), items: catalog.recipes) { recipe in
+                visibleCatalogSection(title: NSLocalizedString("recipes.title", comment: "Recipes section"), items: catalog.recipes) { recipe in
                     NavigationLink {
                         RecipeDetailView(recipeID: recipe.id, initialRecipe: recipe)
                     } label: {
@@ -1196,7 +1196,7 @@ private struct FriendProfileView: View {
             }
 
             if !catalog.mealTemplates.isEmpty {
-                visibleCatalogSection(title: NSLocalizedString("favorites.scope.meals", comment: "Favorite meals section"), items: catalog.mealTemplates) { mealTemplate in
+                visibleCatalogSection(title: NSLocalizedString("today.meals.title", comment: "Meals section"), items: catalog.mealTemplates) { mealTemplate in
                     NavigationLink {
                         MealTemplateDetailView(mealTemplateID: mealTemplate.id, initialMealTemplate: mealTemplate)
                     } label: {

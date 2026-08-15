@@ -51,7 +51,7 @@ struct WatchTodaySnapshot: Codable, Sendable {
     let meals: [WatchMealSummary]
     let mealItems: [WatchMealItemSummary]
     let mealCategories: [WatchMealCategory]
-    let favoriteProducts: [WatchQuickAddItem]
+    let products: [WatchQuickAddItem]
     let recipes: [WatchQuickAddItem]
     let mealTemplates: [WatchQuickAddItem]
     var updatedAt: Date
@@ -73,6 +73,7 @@ struct WatchTodaySnapshot: Codable, Sendable {
         case meals
         case mealItems
         case mealCategories
+        case products
         case favoriteProducts
         case recipes
         case mealTemplates
@@ -96,7 +97,7 @@ struct WatchTodaySnapshot: Codable, Sendable {
         meals: [WatchMealSummary] = [],
         mealItems: [WatchMealItemSummary] = [],
         mealCategories: [WatchMealCategory] = [],
-        favoriteProducts: [WatchQuickAddItem] = [],
+        products: [WatchQuickAddItem] = [],
         recipes: [WatchQuickAddItem] = [],
         mealTemplates: [WatchQuickAddItem] = [],
         updatedAt: Date
@@ -117,7 +118,7 @@ struct WatchTodaySnapshot: Codable, Sendable {
         self.meals = meals
         self.mealItems = mealItems
         self.mealCategories = mealCategories
-        self.favoriteProducts = favoriteProducts
+        self.products = products
         self.recipes = recipes
         self.mealTemplates = mealTemplates
         self.updatedAt = updatedAt
@@ -141,7 +142,9 @@ struct WatchTodaySnapshot: Codable, Sendable {
         meals = try container.decodeIfPresent([WatchMealSummary].self, forKey: .meals) ?? []
         mealItems = try container.decodeIfPresent([WatchMealItemSummary].self, forKey: .mealItems) ?? []
         mealCategories = try container.decodeIfPresent([WatchMealCategory].self, forKey: .mealCategories) ?? []
-        favoriteProducts = try container.decodeIfPresent([WatchQuickAddItem].self, forKey: .favoriteProducts) ?? []
+        products = try container.decodeIfPresent([WatchQuickAddItem].self, forKey: .products)
+            ?? container.decodeIfPresent([WatchQuickAddItem].self, forKey: .favoriteProducts)
+            ?? []
         recipes = try container.decodeIfPresent([WatchQuickAddItem].self, forKey: .recipes) ?? []
         mealTemplates = try container.decodeIfPresent([WatchQuickAddItem].self, forKey: .mealTemplates) ?? []
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
@@ -157,7 +160,7 @@ struct WatchTodaySnapshot: Codable, Sendable {
         meals: [],
         mealItems: [],
         mealCategories: [],
-        favoriteProducts: [],
+        products: [],
         recipes: [],
         mealTemplates: [],
         updatedAt: .distantPast

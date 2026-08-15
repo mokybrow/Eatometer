@@ -314,7 +314,7 @@ struct EatometerTodaySnapshot: Codable {
     let meals: [EatometerTodayMealSummary]
     let mealItems: [EatometerTodayMealItemSummary]
     let mealCategories: [EatometerMealCategorySummary]
-    let favoriteProducts: [EatometerQuickAddItem]
+    let products: [EatometerQuickAddItem]
     let recipes: [EatometerQuickAddItem]
     let mealTemplates: [EatometerQuickAddItem]
     var updatedAt: Date
@@ -337,6 +337,7 @@ struct EatometerTodaySnapshot: Codable {
         case meals
         case mealItems
         case mealCategories
+        case products
         case favoriteProducts
         case recipes
         case mealTemplates
@@ -362,7 +363,9 @@ struct EatometerTodaySnapshot: Codable {
         meals = try container.decodeIfPresent([EatometerTodayMealSummary].self, forKey: .meals) ?? []
         mealItems = try container.decodeIfPresent([EatometerTodayMealItemSummary].self, forKey: .mealItems) ?? []
         mealCategories = try container.decodeIfPresent([EatometerMealCategorySummary].self, forKey: .mealCategories) ?? []
-        favoriteProducts = try container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .favoriteProducts) ?? []
+        products = try container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .products)
+            ?? container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .favoriteProducts)
+            ?? []
         recipes = try container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .recipes) ?? []
         mealTemplates = try container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .mealTemplates) ?? []
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)

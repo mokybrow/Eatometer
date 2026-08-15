@@ -971,7 +971,6 @@ struct AddMealSheetView: View {
         switch initialQuickAdd.kind {
         case .product:
             let localProduct = catalogService.productSummary(id: initialQuickAdd.id)
-                ?? catalogService.favoriteProductSummaries.first(where: { $0.id == initialQuickAdd.id })
             let product: ProductSummary?
             if let localProduct {
                 product = localProduct

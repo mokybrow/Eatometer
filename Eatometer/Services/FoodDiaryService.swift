@@ -163,7 +163,7 @@ final class FoodDiaryService: ObservableObject {
         let meals: [WidgetTodayMealSummary]
         let mealItems: [WidgetTodayMealItemSummary]
         let mealCategories: [WidgetMealCategorySummary]
-        let favoriteProducts: [WidgetQuickAddItem]
+        let products: [WidgetQuickAddItem]
         let recipes: [WidgetQuickAddItem]
         let mealTemplates: [WidgetQuickAddItem]
         let updatedAt: Date
@@ -3617,7 +3617,7 @@ final class FoodDiaryService: ObservableObject {
             meals: makeWidgetMealSummaries(from: todayMeals),
             mealItems: makeWidgetMealItemSummaries(from: todayMeals),
             mealCategories: makeWidgetMealCategories(),
-            favoriteProducts: quickAddItems.favoriteProducts,
+            products: quickAddItems.products,
             recipes: quickAddItems.recipes,
             mealTemplates: quickAddItems.mealTemplates,
             updatedAt: Date()
@@ -3766,11 +3766,11 @@ final class FoodDiaryService: ObservableObject {
     }
 
     private func makeWidgetQuickAddItems() -> (
-        favoriteProducts: [WidgetQuickAddItem],
+        products: [WidgetQuickAddItem],
         recipes: [WidgetQuickAddItem],
         mealTemplates: [WidgetQuickAddItem]
     ) {
-        let favoriteProducts = (catalogService?.favoriteProductSummaries ?? [])
+        let products = (catalogService?.products ?? [])
             .prefix(10)
             .map(makeWidgetQuickAddItem(from:))
         let recipes = (catalogService?.recipes ?? [])
@@ -3780,7 +3780,7 @@ final class FoodDiaryService: ObservableObject {
             .prefix(10)
             .map(makeWidgetQuickAddItem(from:))
 
-        return (Array(favoriteProducts), Array(recipes), Array(mealTemplates))
+        return (Array(products), Array(recipes), Array(mealTemplates))
     }
 
     private func makeWidgetQuickAddItem(from product: ProductSummary) -> WidgetQuickAddItem {

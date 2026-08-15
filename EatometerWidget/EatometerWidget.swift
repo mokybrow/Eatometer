@@ -740,7 +740,7 @@ private struct QuickMealWidgetProvider: AppIntentTimelineProvider {
     }
 
     private static func quickItems(from snapshot: EatometerTodaySnapshot, source: QuickMealQuickAddSource) -> [QuickMealWidgetItem] {
-        let favorites = snapshot.favoriteProducts.map {
+        let products = snapshot.products.map {
             QuickMealWidgetItem(itemID: $0.id, title: $0.title, subtitle: $0.subtitle, calories: $0.calories, kind: .product)
         }
         let templates = snapshot.mealTemplates.map {
@@ -752,9 +752,9 @@ private struct QuickMealWidgetProvider: AppIntentTimelineProvider {
 
         switch source {
         case .mixed:
-            return favorites + templates + recipes
+            return products + templates + recipes
         case .products:
-            return favorites
+            return products
         case .recipes:
             return recipes
         case .mealTemplates:
@@ -800,7 +800,7 @@ private struct QuickMealWidgetView: View {
     private var emptyText: String {
         WidgetLocalization.string(
             "widget.quick_meal.empty",
-            defaultValue: "Add favorites in the app to show them here.",
+            defaultValue: "Add products, recipes, or rations in the app to show them here.",
             comment: "Quick meal widget empty state"
         )
     }

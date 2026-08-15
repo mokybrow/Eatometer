@@ -35,10 +35,6 @@ final class FoodCatalogService: ObservableObject {
     @Published private(set) var recipeEditorStore: RecipeEditorDraftStore?
     @Published private(set) var isLoading = false
     @Published var lastErrorMessage: String?
-    @Published private(set) var favoriteProductIDs: Set<UUID> = []
-    @Published private(set) var favoriteProductSummaries: [ProductSummary] = []
-    @Published private(set) var favoriteRecipeIDs: Set<UUID> = []
-    @Published private(set) var favoriteMealTemplateIDs: Set<UUID> = []
 
     let authService: FoodAuthService?
     private let serverHost: String
@@ -103,9 +99,6 @@ final class FoodCatalogService: ObservableObject {
     }
 
     private static let catalogCacheKeyPrefix = "Eatometer.catalog.snapshot."
-    private static let favoritesCacheKeyPrefix = "Eatometer.favorites."
-    private static let favoriteRecipesCacheKeyPrefix = "Eatometer.favorites.recipes."
-    private static let favoriteMealTemplatesCacheKeyPrefix = "Eatometer.favorites.mealTemplates."
     private static let sharedAppGroupID = "group.com.goeatometer.Eatometer.shared"
     private static let messagesPickerSnapshotKey = "Eatometer.messages.picker.snapshot"
     private static let messagesPickerSnapshotSignatureKey = "Eatometer.messages.picker.snapshot.signature"
@@ -159,10 +152,6 @@ final class FoodCatalogService: ObservableObject {
         self.mealTemplates = FoodCatalogService.sortedMealTemplates(snapshot?.mealTemplates ?? [], sort: .addedNewest)
         self.recipeEditorStore = nil
         self.cachedProductDetails = FoodCatalogService.knownProducts(from: snapshot)
-        self.favoriteProductIDs = []
-        self.favoriteProductSummaries = []
-        self.favoriteRecipeIDs = []
-        self.favoriteMealTemplateIDs = []
         scheduleMessagesPickerSnapshotRefresh(force: true)
         scheduleSharePayloadWarmup(force: true)
         scheduleMyProductSubmissionsWarmup()
@@ -184,10 +173,6 @@ final class FoodCatalogService: ObservableObject {
         }
 
         if didChangeScope {
-            favoriteProductIDs = []
-            favoriteProductSummaries = []
-            favoriteRecipeIDs = []
-            favoriteMealTemplateIDs = []
             scheduleMyProductSubmissionsWarmup(force: true)
         }
 
@@ -640,10 +625,7 @@ final class FoodCatalogService: ObservableObject {
                 productSharePayloads.removeValue(forKey: id)
                 productShareTasks[id]?.cancel()
                 productShareTasks.removeValue(forKey: id)
-                favoriteProductIDs.remove(id)
-                favoriteProductSummaries.removeAll { $0.id == id }
                 FrequentProductsStore.shared.remove(id)
-                persistFavorites()
                 persistCatalogSnapshot()
             }
             lastErrorMessage = nil
@@ -1114,241 +1096,11 @@ final class FoodCatalogService: ObservableObject {
         recipeEditorStore = nil
         cachedProductDetails = [:]
         resetSharePayloadCache()
-        favoriteProductIDs = []
-        favoriteProductSummaries = []
-        favoriteRecipeIDs = []
-        favoriteMealTemplateIDs = []
-        CachedJSONStore.remove(key: Self.favoritesCacheKeyPrefix + cacheScopeID)
-        CachedJSONStore.remove(key: Self.favoriteRecipesCacheKeyPrefix + cacheScopeID)
-        CachedJSONStore.remove(key: Self.favoriteMealTemplatesCacheKeyPrefix + cacheScopeID)
         lastErrorMessage = nil
     }
 
     func clearLastError() {
         lastErrorMessage = nil
-    }
-
-    func loadFavoriteProducts() async {
-        guard authService != nil else { return }
-        do {
-            let response = try await withAuthenticatedMetadata { metadata in
-                return try await withFoodClient { client in
-                    try await client.listFavoriteProducts(Food_ListFavoriteProductsRequest(), metadata: metadata)
-                }
-            }
-            let summaries = response.products.compactMap(Self.makeProductSummary)
-            let ids = Set(summaries.map(\.id))
-            favoriteProductIDs = ids
-            favoriteProductSummaries = sortedProducts(summaries)
-            for product in summaries {
-                cachedProductDetails[product.id] = product
-            }
-            persistFavorites()
-            lastErrorMessage = nil
-        } catch {
-            storeLastError(error)
-        }
-    }
-
-    func toggleFavorite(productID: UUID) async {
-        guard authService != nil else { return }
-        let isFavorite = favoriteProductIDs.contains(productID)
-        let previousSummaries = favoriteProductSummaries
-        if isFavorite {
-            favoriteProductIDs.remove(productID)
-            favoriteProductSummaries.removeAll { $0.id == productID }
-        } else {
-            favoriteProductIDs.insert(productID)
-            if let summary = productSummary(id: productID) {
-                favoriteProductSummaries = sortedProducts(favoriteProductSummaries + [summary])
-            }
-        }
-        persistFavorites()
-        do {
-            if isFavorite {
-                _ = try await withAuthenticatedMetadata { metadata in
-                    return try await withFoodClient { client in
-                        var request = Food_RemoveFavoriteProductRequest()
-                        request.productID = productID.uuidString
-                        return try await client.removeFavoriteProduct(request, metadata: metadata)
-                    }
-                }
-            } else {
-                _ = try await withAuthenticatedMetadata { metadata in
-                    return try await withFoodClient { client in
-                        var request = Food_AddFavoriteProductRequest()
-                        request.productID = productID.uuidString
-                        return try await client.addFavoriteProduct(request, metadata: metadata)
-                    }
-                }
-            }
-            lastErrorMessage = nil
-        } catch {
-            if isFavorite {
-                favoriteProductIDs.insert(productID)
-            } else {
-                favoriteProductIDs.remove(productID)
-            }
-            favoriteProductSummaries = previousSummaries
-            persistFavorites()
-            storeLastError(error)
-        }
-    }
-
-    func isFavorite(_ productID: UUID) -> Bool {
-        favoriteProductIDs.contains(productID)
-    }
-
-    var favoriteRecipeSummaries: [RecipeSummary] {
-        sortedRecipes(recipes.filter { favoriteRecipeIDs.contains($0.id) })
-    }
-
-    var favoriteMealTemplateSummaries: [MealTemplateSummary] {
-        sortedMealTemplates(mealTemplates.filter { favoriteMealTemplateIDs.contains($0.id) })
-    }
-
-    func isFavoriteRecipe(_ recipeID: UUID) -> Bool {
-        favoriteRecipeIDs.contains(recipeID)
-    }
-
-    func isFavoriteMealTemplate(_ mealTemplateID: UUID) -> Bool {
-        favoriteMealTemplateIDs.contains(mealTemplateID)
-    }
-
-    func toggleFavoriteRecipe(_ recipeID: UUID) async {
-        guard authService != nil else { return }
-        let isFavorite = favoriteRecipeIDs.contains(recipeID)
-        if isFavorite {
-            favoriteRecipeIDs.remove(recipeID)
-        } else {
-            favoriteRecipeIDs.insert(recipeID)
-        }
-        persistFavoriteIDs(favoriteRecipeIDs, keyPrefix: Self.favoriteRecipesCacheKeyPrefix)
-        do {
-            if isFavorite {
-                _ = try await withAuthenticatedMetadata { metadata in
-                    return try await withFoodClient { client in
-                        var request = Food_RemoveFavoriteRecipeRequest()
-                        request.recipeID = recipeID.uuidString
-                        return try await client.removeFavoriteRecipe(request, metadata: metadata)
-                    }
-                }
-            } else {
-                _ = try await withAuthenticatedMetadata { metadata in
-                    return try await withFoodClient { client in
-                        var request = Food_AddFavoriteRecipeRequest()
-                        request.recipeID = recipeID.uuidString
-                        return try await client.addFavoriteRecipe(request, metadata: metadata)
-                    }
-                }
-            }
-            lastErrorMessage = nil
-        } catch {
-            if isFavorite {
-                favoriteRecipeIDs.insert(recipeID)
-            } else {
-                favoriteRecipeIDs.remove(recipeID)
-            }
-            persistFavoriteIDs(favoriteRecipeIDs, keyPrefix: Self.favoriteRecipesCacheKeyPrefix)
-            storeLastError(error)
-        }
-    }
-
-    func toggleFavoriteMealTemplate(_ mealTemplateID: UUID) async {
-        guard authService != nil else { return }
-        let isFavorite = favoriteMealTemplateIDs.contains(mealTemplateID)
-        if isFavorite {
-            favoriteMealTemplateIDs.remove(mealTemplateID)
-        } else {
-            favoriteMealTemplateIDs.insert(mealTemplateID)
-        }
-        persistFavoriteIDs(favoriteMealTemplateIDs, keyPrefix: Self.favoriteMealTemplatesCacheKeyPrefix)
-        do {
-            if isFavorite {
-                _ = try await withAuthenticatedMetadata { metadata in
-                    return try await withFoodClient { client in
-                        var request = Food_RemoveFavoriteMealTemplateRequest()
-                        request.mealTemplateID = mealTemplateID.uuidString
-                        return try await client.removeFavoriteMealTemplate(request, metadata: metadata)
-                    }
-                }
-            } else {
-                _ = try await withAuthenticatedMetadata { metadata in
-                    return try await withFoodClient { client in
-                        var request = Food_AddFavoriteMealTemplateRequest()
-                        request.mealTemplateID = mealTemplateID.uuidString
-                        return try await client.addFavoriteMealTemplate(request, metadata: metadata)
-                    }
-                }
-            }
-            lastErrorMessage = nil
-        } catch {
-            if isFavorite {
-                favoriteMealTemplateIDs.insert(mealTemplateID)
-            } else {
-                favoriteMealTemplateIDs.remove(mealTemplateID)
-            }
-            persistFavoriteIDs(favoriteMealTemplateIDs, keyPrefix: Self.favoriteMealTemplatesCacheKeyPrefix)
-            storeLastError(error)
-        }
-    }
-
-    func loadFavoriteRecipes() async {
-        guard authService != nil else { return }
-        do {
-            let response = try await withAuthenticatedMetadata { metadata in
-                return try await withFoodClient { client in
-                    try await client.listFavoriteRecipeIDs(Food_ListFavoriteRecipeIDsRequest(), metadata: metadata)
-                }
-            }
-            let ids = Set(response.recipeIds.compactMap { UUID(uuidString: $0) })
-            favoriteRecipeIDs = ids
-            persistFavoriteIDs(ids, keyPrefix: Self.favoriteRecipesCacheKeyPrefix)
-            lastErrorMessage = nil
-        } catch {
-            storeLastError(error)
-        }
-    }
-
-    func loadFavoriteMealTemplates() async {
-        guard authService != nil else { return }
-        do {
-            let response = try await withAuthenticatedMetadata { metadata in
-                return try await withFoodClient { client in
-                    try await client.listFavoriteMealTemplateIDs(Food_ListFavoriteMealTemplateIDsRequest(), metadata: metadata)
-                }
-            }
-            let ids = Set(response.mealTemplateIds.compactMap { UUID(uuidString: $0) })
-            favoriteMealTemplateIDs = ids
-            persistFavoriteIDs(ids, keyPrefix: Self.favoriteMealTemplatesCacheKeyPrefix)
-            lastErrorMessage = nil
-        } catch {
-            storeLastError(error)
-        }
-    }
-
-    private func persistFavoriteIDs(_ ids: Set<UUID>, keyPrefix: String) {
-        let sorted = ids.map(\.uuidString).sorted()
-        CachedJSONStore.save(sorted, key: keyPrefix + cacheScopeID)
-    }
-
-    private static func loadCachedFavoriteIDs(keyPrefix: String, scopeID: String) -> Set<UUID> {
-        guard let ids = CachedJSONStore.load([String].self, key: keyPrefix + scopeID) else {
-            return []
-        }
-        return Set(ids.compactMap { UUID(uuidString: $0) })
-    }
-
-    private func persistFavorites() {
-        let ids = favoriteProductIDs.map(\.uuidString).sorted()
-        CachedJSONStore.save(ids, key: Self.favoritesCacheKeyPrefix + cacheScopeID)
-    }
-
-    private static func loadCachedFavorites(scopeID: String) -> Set<UUID> {
-        guard let ids = CachedJSONStore.load([String].self, key: favoritesCacheKeyPrefix + scopeID) else {
-            return []
-        }
-        return Set(ids.compactMap { UUID(uuidString: $0) })
     }
 
     func storeLastError(_ error: Error) {
@@ -1805,7 +1557,6 @@ final class FoodCatalogService: ObservableObject {
         products = sortedProducts(products)
         recipes = sortedRecipes(recipes)
         mealTemplates = sortedMealTemplates(mealTemplates)
-        favoriteProductSummaries = sortedProducts(favoriteProductSummaries)
         cachedProductDetails = Dictionary(uniqueKeysWithValues: sortedProducts(Array(cachedProductDetails.values)).map { ($0.id, $0) })
         persistCatalogSnapshot()
     }

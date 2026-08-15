@@ -321,7 +321,7 @@ private struct MealCategoryAddView: View {
     private var snapshot: WatchTodaySnapshot { sessionManager.todaySnapshot }
 
     private var hasQuickAddItems: Bool {
-        !snapshot.mealTemplates.isEmpty || !snapshot.recipes.isEmpty || !snapshot.favoriteProducts.isEmpty
+        !snapshot.mealTemplates.isEmpty || !snapshot.recipes.isEmpty || !snapshot.products.isEmpty
     }
 
     var body: some View {
@@ -350,11 +350,11 @@ private struct MealCategoryAddView: View {
                 )
 
                 QuickAddSection(
-                    titleKey: "products.tab.favorites",
-                    emptyTitleKey: "products.favorites.empty.title",
-                    items: snapshot.favoriteProducts,
+                    titleKey: "products.title",
+                    emptyTitleKey: "products.empty.title",
+                    items: snapshot.products,
                     action: { itemID, itemTitle in
-                        sessionManager.logFavoriteProduct(itemID, mealCategoryID: category.id)
+                        sessionManager.logProduct(itemID, mealCategoryID: category.id)
                         onItemLogged(itemTitle)
                         dismiss()
                     }

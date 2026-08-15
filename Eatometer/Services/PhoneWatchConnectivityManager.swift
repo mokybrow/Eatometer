@@ -125,11 +125,11 @@ extension PhoneWatchConnectivityManager: WCSessionDelegate {
                 self.diaryService?.addWater(amount, for: .now)
                 self.refreshAndSendSnapshot()
             }
-        case "logFavoriteProduct":
+        case "logFavoriteProduct", "logProduct":
             guard let productID = payload["productID"] as? String,
                   let id = UUID(uuidString: productID) else { return }
             Task { @MainActor in
-                await self.logFavoriteProduct(id, mealCategoryID: resolvedMealCategoryID)
+                await self.logProduct(id, mealCategoryID: resolvedMealCategoryID)
             }
         case "logRecipe":
             guard let recipeID = payload["recipeID"] as? String,
@@ -171,7 +171,7 @@ extension PhoneWatchConnectivityManager: WCSessionDelegate {
         }
     }
 
-    private func logFavoriteProduct(_ id: UUID, mealCategoryID: String?) async {
+    private func logProduct(_ id: UUID, mealCategoryID: String?) async {
         guard let diaryService, let catalogService else { return }
         let product = if let cachedProduct = catalogService.productSummary(id: id) {
             cachedProduct

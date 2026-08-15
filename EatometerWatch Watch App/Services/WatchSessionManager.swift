@@ -39,9 +39,9 @@ final class WatchSessionManager: NSObject, ObservableObject {
         ])
     }
 
-    func logFavoriteProduct(_ id: String, mealCategoryID: String) {
+    func logProduct(_ id: String, mealCategoryID: String) {
         sendPayload([
-            "action": "logFavoriteProduct",
+            "action": "logProduct",
             "productID": id,
             "mealCategoryID": mealCategoryID,
             "timestamp": Date().timeIntervalSince1970
