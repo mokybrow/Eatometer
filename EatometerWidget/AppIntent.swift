@@ -319,6 +319,12 @@ struct EatometerTodaySnapshot: Codable {
     let mealTemplates: [EatometerQuickAddItem]
     var updatedAt: Date
 
+    /// One case per stored property, and no more.
+    ///
+    /// `favoriteProducts` — what `products` used to be called — sat here with
+    /// no property behind it, and that alone stopped `Encodable` from being
+    /// synthesised: the compiler will not write an encoder when it cannot say
+    /// what a key should hold. The old name is still read, from the enum below.
     private enum CodingKeys: String, CodingKey {
         case dayKey
         case calories
@@ -338,14 +344,25 @@ struct EatometerTodaySnapshot: Codable {
         case mealItems
         case mealCategories
         case products
-        case favoriteProducts
         case recipes
         case mealTemplates
         case updatedAt
     }
 
+    /// Names the app no longer writes but may still have written.
+    ///
+    /// Kept apart from `CodingKeys` so that one stays a faithful list of the
+    /// properties, which is what the synthesised encoder needs it to be.
+    private enum LegacyCodingKeys: String, CodingKey {
+        /// What `products` was called in older builds. Read so a widget whose
+        /// shared container was last written by one of them keeps its
+        /// quick-add list instead of coming back empty.
+        case favoriteProducts
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let legacy = try decoder.container(keyedBy: LegacyCodingKeys.self)
         dayKey = try container.decode(String.self, forKey: .dayKey)
         calories = try container.decode(Int.self, forKey: .calories)
         protein = try container.decode(Int.self, forKey: .protein)
@@ -364,7 +381,7 @@ struct EatometerTodaySnapshot: Codable {
         mealItems = try container.decodeIfPresent([EatometerTodayMealItemSummary].self, forKey: .mealItems) ?? []
         mealCategories = try container.decodeIfPresent([EatometerMealCategorySummary].self, forKey: .mealCategories) ?? []
         products = try container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .products)
-            ?? container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .favoriteProducts)
+            ?? legacy.decodeIfPresent([EatometerQuickAddItem].self, forKey: .favoriteProducts)
             ?? []
         recipes = try container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .recipes) ?? []
         mealTemplates = try container.decodeIfPresent([EatometerQuickAddItem].self, forKey: .mealTemplates) ?? []
