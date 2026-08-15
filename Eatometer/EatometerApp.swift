@@ -34,7 +34,6 @@ struct EatometerApp: App {
         _supporterService = StateObject(wrappedValue: SupporterService(userService: user))
 
         PushNotificationService.shared.configure()
-        PhoneWatchConnectivityManager.shared.configure(diaryService: diary, catalogService: catalog)
     }
 
     private static func configureSystemAlertAppearance() {
