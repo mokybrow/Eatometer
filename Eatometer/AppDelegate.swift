@@ -2,8 +2,6 @@ import UIKit
 
 @MainActor
 final class AppDelegate: NSObject, UIApplicationDelegate {
-    private var launchShortcutAction: AppShortcutAction?
-
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -12,6 +10,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
 
+    /// Attaches a scene delegate, which SwiftUI does not provide.
+    ///
+    /// This is the only reason the method is here. Quick actions are delivered
+    /// to `UIWindowSceneDelegate`, and without a class named here there is no
+    /// such delegate for the system to deliver them to.
     func application(
         _ application: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
@@ -19,35 +22,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     ) -> UISceneConfiguration {
         configureShortcutItems(for: application)
 
-        if let shortcutItem = options.shortcutItem {
-            launchShortcutAction = shortcutAction(from: shortcutItem)
-        }
-
-        return UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        let configuration = UISceneConfiguration(name: nil, sessionRole: connectingSceneSession.role)
+        configuration.delegateClass = SceneDelegate.self
+        return configuration
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         configureShortcutItems(for: application)
-
-        guard let launchShortcutAction else { return }
-        DeepLinkRouter.shared.pendingShortcutAction = launchShortcutAction
-        self.launchShortcutAction = nil
-    }
-
-    func application(
-        _ application: UIApplication,
-        performActionFor shortcutItem: UIApplicationShortcutItem,
-        completionHandler: @escaping (Bool) -> Void
-    ) {
-        configureShortcutItems(for: application)
-
-        guard let action = shortcutAction(from: shortcutItem) else {
-            completionHandler(false)
-            return
-        }
-
-        DeepLinkRouter.shared.pendingShortcutAction = action
-        completionHandler(true)
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -77,9 +58,5 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                 icon: UIApplicationShortcutIcon(systemImageName: "book.closed")
             ),
         ]
-    }
-
-    private func shortcutAction(from shortcutItem: UIApplicationShortcutItem) -> AppShortcutAction? {
-        AppShortcutAction(rawValue: shortcutItem.type)
     }
 }

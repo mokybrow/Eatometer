@@ -83,8 +83,25 @@ enum EOTheme {
         static let calories = Color(red: 1.0, green: 0.196, blue: 0.529)    // #FF3287
         static let protein = Color(red: 0.0, green: 0.792, blue: 0.871)     // #00CADE
         static let carbs = Color(red: 0.302, green: 0.886, blue: 0.0)       // #4DE200
-        static let fat = Color(red: 0.902, green: 0.0, blue: 0.902)         // #E600E6
+        // Amber, not the magenta it used to be. Magenta sat a shade away from
+        // the calories pink, so on a row of four rings the two read as one
+        // colour repeated — which is the one thing the row exists to avoid.
+        static let fat = Color(red: 0.906, green: 0.576, blue: 0.047)       // #E79310
         static let destructive = Color(red: 1.0, green: 0.176, blue: 0.333) // #FF2D55
+
+        /// The unfilled part of a nutrition ring.
+        ///
+        /// One neutral grey for all four rather than each ring's own colour at
+        /// low opacity. Tinted tracks made an empty ring look part-filled — a
+        /// pale pink circle reads as progress against a pink target — and put
+        /// four more colours on a card that already has four.
+        static var ringTrack: Color {
+            Color(UIColor { trait in
+                trait.userInterfaceStyle == .dark
+                    ? UIColor(red: 0.231, green: 0.231, blue: 0.243, alpha: 1)  // #3B3B3E
+                    : UIColor(red: 0.898, green: 0.898, blue: 0.910, alpha: 1)  // #E5E5E8
+            })
+        }
     }
 
     // MARK: Typography
@@ -906,31 +923,57 @@ struct EOSearchBar: View {
 // MARK: - Buttons
 
 /// Blue capsule call-to-action (Continue / Finish).
+///
+/// `fillsWidth` is for the one that sits at the foot of a sheet and spans it —
+/// the import buttons. Those used to be a `PressableIconButton` with an accent
+/// rectangle put behind it, which drew two buttons: that component ends in
+/// `.glassEffect()`, so a glass capsule sat inside the rectangle, and its
+/// press animation scaled the whole thing up by 12% until it overflowed what it
+/// was drawn in.
 struct EOPrimaryButton: View {
     private let title: Text
+    private let systemImage: String?
     private let isEnabled: Bool
     private let isLoading: Bool
+    private let fillsWidth: Bool
     private let action: () -> Void
 
-    init(_ titleKey: LocalizedStringKey, isEnabled: Bool = true, isLoading: Bool = false, action: @escaping () -> Void) {
+    init(
+        _ titleKey: LocalizedStringKey,
+        systemImage: String? = nil,
+        isEnabled: Bool = true,
+        isLoading: Bool = false,
+        fillsWidth: Bool = false,
+        action: @escaping () -> Void
+    ) {
         self.title = Text(titleKey)
+        self.systemImage = systemImage
         self.isEnabled = isEnabled
         self.isLoading = isLoading
+        self.fillsWidth = fillsWidth
         self.action = action
     }
 
-    init(title: Text, isEnabled: Bool = true, isLoading: Bool = false, action: @escaping () -> Void) {
+    init(
+        title: Text,
+        systemImage: String? = nil,
+        isEnabled: Bool = true,
+        isLoading: Bool = false,
+        fillsWidth: Bool = false,
+        action: @escaping () -> Void
+    ) {
         self.title = title
+        self.systemImage = systemImage
         self.isEnabled = isEnabled
         self.isLoading = isLoading
+        self.fillsWidth = fillsWidth
         self.action = action
     }
 
     var body: some View {
         Button(action: action) {
             ZStack {
-                title
-                    .font(.body.weight(.regular))
+                label
                     .opacity(isLoading ? 0 : 1)
                 if isLoading {
                     ProgressView()
@@ -940,6 +983,9 @@ struct EOPrimaryButton: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 30)
             .padding(.vertical, 14)
+            // Applied to the content, before the background, so the fill is
+            // the shape that grows rather than a pill floating in a wider box.
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
             .background(
                 (isEnabled ? EOTheme.Palette.accent : Color.secondary.opacity(0.45)),
                 in: Capsule(style: .continuous)
@@ -947,6 +993,17 @@ struct EOPrimaryButton: View {
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled || isLoading)
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        if let systemImage {
+            Label { title } icon: { Image(systemName: systemImage) }
+                .labelStyle(.titleAndIcon)
+                .font(.body.weight(.semibold))
+        } else {
+            title.font(.body.weight(.regular))
+        }
     }
 }
 

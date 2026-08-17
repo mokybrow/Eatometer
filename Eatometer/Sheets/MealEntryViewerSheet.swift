@@ -119,7 +119,6 @@ struct MealEntryViewerSheet: View {
         )
     }
 
-    /// Mock-up meta line: "100 g - 90kc - 12p - 2c - 2f".
     private func metaText(for item: MealItemEntry) -> String {
         let amountText = displayFoodQuantityText(
             amount: item.amount,
@@ -127,6 +126,19 @@ struct MealEntryViewerSheet: View {
             servingLabel: item.servingLabel,
             product: catalogService.productSummary(for: item)
         )
-        return "\(amountText) - \(item.calories)kc - \(item.protein)p - \(item.carbs)c - \(item.fat)f"
+        let nutritionText = String(
+            format: NSLocalizedString(
+                "meal.import.nutrition",
+                tableName: nil,
+                bundle: .main,
+                value: "%d kcal • P %d • F %d • C %d",
+                comment: "Meal item nutrition summary"
+            ),
+            item.calories,
+            item.protein,
+            item.fat,
+            item.carbs
+        )
+        return "\(amountText) · \(nutritionText)"
     }
 }

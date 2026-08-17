@@ -150,49 +150,51 @@ private struct DiaryWaterOverviewCard: View {
     }
 }
 
-/// Full-width "Nutrition Ring" card: three macro rings on the left, the day's
-/// calories and the macro breakdown on the right. It carries everything the
-/// separate Daily Goal page used to show.
+/// Full-width nutrition card with one compact progress ring per metric.
 struct DiaryNutritionRingCard: View {
     let summary: NutritionSummary
     let goal: DailyNutritionGoal
 
-    private let ringLineWidth: CGFloat = 20
-
-    /// The dark disc at the centre, one stroke across.
-    ///
-    /// Matched to the stroke so that it is the same size as the round caps the
-    /// rings stand in when they are empty: an untouched card is then four dots of
-    /// one diameter rather than three around a slightly fatter fourth.
-    private var innerDiameter: CGFloat { ringLineWidth }
-
-    /// Outermost ring is calories, then carbs, then protein — the order the
-    /// legend on the right repeats. Each diameter is a stroke narrower on both
-    /// sides than the one outside it, so the three rings sit flush like in the
-    /// mock-up.
-    ///
-    /// Measured out from the hole rather than written down as 143/103/63, which
-    /// is where the mismatch came from: those left 23pt in the middle, three
-    /// more than the stroke. Deriving them keeps the hole and the caps equal if
-    /// the stroke ever changes.
-    private var ringDiameters: [CGFloat] {
-        (1...3).reversed().map { innerDiameter + ringLineWidth * 2 * CGFloat($0) }
-    }
+    private let ringDiameter: CGFloat = 56
+    private let ringLineWidth: CGFloat = 7
 
     private var rings: [MacroRing] {
         [
-            MacroRing(id: "calories",
-                      percent: percent(summary.calories, goal.calories),
-                      color: EOTheme.Palette.calories,
-                      track: EOTheme.Palette.calories.opacity(0.16)),
-            MacroRing(id: "carbs",
-                      percent: percent(summary.carbs, targetCarbs),
-                      color: EOTheme.Palette.carbs,
-                      track: EOTheme.Palette.carbs.opacity(0.16)),
-            MacroRing(id: "protein",
-                      percent: percent(summary.protein, targetProtein),
-                      color: EOTheme.Palette.protein,
-                      track: EOTheme.Palette.protein.opacity(0.16))
+            MacroRing(
+                id: "calories",
+                titleKey: "diary.calories",
+                value: summary.calories,
+                target: goal.calories,
+                unit: kcalUnit,
+                color: EOTheme.Palette.calories
+            ),
+            MacroRing(
+                id: "protein",
+                titleKey: "diary.protein",
+                value: summary.protein,
+                target: targetProtein,
+                unit: gramsUnit,
+                color: EOTheme.Palette.protein
+            ),
+            // Carbohydrates before fats, which is the order the figures are
+            // quoted in everywhere outside this app and the order on the label
+            // of anything you can buy.
+            MacroRing(
+                id: "carbs",
+                titleKey: "diary.carbs",
+                value: summary.carbs,
+                target: targetCarbs,
+                unit: gramsUnit,
+                color: EOTheme.Palette.carbs
+            ),
+            MacroRing(
+                id: "fat",
+                titleKey: "diary.fat",
+                value: summary.fat,
+                target: targetFat,
+                unit: gramsUnit,
+                color: EOTheme.Palette.fat
+            )
         ]
     }
 
@@ -204,51 +206,11 @@ struct DiaryNutritionRingCard: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
-            HStack(alignment: .center, spacing: 25) {
-                ZStack {
-                    ForEach(Array(rings.enumerated()), id: \.element.id) { index, ring in
-                        MacroRingShape(
-                            percent: ring.percent,
-                            trackColor: ring.track,
-                            color: ring.color,
-                            lineWidth: ringLineWidth
-                        )
-                        .frame(width: ringDiameters[index], height: ringDiameters[index])
-                    }
-
-                    // Plugs the hole left by the innermost ring.
-                    //
-                    // Card colour, because the middle of a ring is nothing — it
-                    // is where the card shows through. It was `Color.primary`,
-                    // which is ink: a black dot in light mode and a white one in
-                    // the dark, reading as a fourth element rather than as the
-                    // absence of one. The disc is still drawn rather than
-                    // dropped, because the end caps cast a shadow that would
-                    // otherwise bleed into the gap.
-                    Circle()
-                        .fill(EOTheme.Palette.card)
-                        .frame(width: innerDiameter, height: innerDiameter)
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(rings) { ring in
+                    ringMetric(ring)
+                        .frame(maxWidth: .infinity)
                 }
-                .frame(width: ringDiameters[0], height: ringDiameters[0])
-
-                VStack(alignment: .leading, spacing: 10) {
-                    legendBlock(
-                        "diary.calories",
-                        value: "\(summary.calories)/\(goal.calories) \(kcalUnit)",
-                        tint: EOTheme.Palette.calories
-                    )
-                    legendBlock(
-                        "diary.carbs",
-                        value: "\(summary.carbs)/\(targetCarbs) \(gramsUnit)",
-                        tint: EOTheme.Palette.carbs
-                    )
-                    legendBlock(
-                        "diary.protein",
-                        value: "\(summary.protein)/\(targetProtein) \(gramsUnit)",
-                        tint: EOTheme.Palette.protein
-                    )
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(EOTheme.Metrics.cardInset)
@@ -262,20 +224,41 @@ struct DiaryNutritionRingCard: View {
         .accessibilityValue(Text(verbatim: accessibilitySummary))
     }
 
-    /// Uppercase caption over a large tinted value, one per ring.
-    private func legendBlock(_ titleKey: String, value: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(verbatim: NSLocalizedString(titleKey, comment: "Nutrient name").uppercased())
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+    /// One ring, its name, and its figure — in that order down the column.
+    ///
+    /// The number is under the ring rather than inside it. Inside, at nine
+    /// points, "1200/2000" was two figures fighting for the width of a
+    /// fifty-six-point circle and neither could be read at a glance; the ring
+    /// was already saying what the fraction said. Below it, in the ring's own
+    /// colour, the figure is the thing the eye lands on and the colour is what
+    /// ties it to the arc above.
+    private func ringMetric(_ ring: MacroRing) -> some View {
+        VStack(spacing: 8) {
+            MacroRingShape(
+                percent: percent(ring.value, ring.target),
+                trackColor: EOTheme.Palette.ringTrack,
+                color: ring.color,
+                lineWidth: ringLineWidth
+            )
+            .frame(width: ringDiameter, height: ringDiameter)
 
-            Text(verbatim: value)
-                .font(.system(size: 20, weight: .semibold).monospacedDigit())
-                .foregroundStyle(tint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+            VStack(spacing: 2) {
+                // Upper-cased and tracked out, so four short words read as
+                // labels rather than as four more numbers.
+                Text(LocalizedStringKey(ring.titleKey))
+                    .font(.system(size: 11, weight: .semibold))
+                    .textCase(.uppercase)
+                    .kerning(0.3)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                Text(verbatim: "\(ring.value)")
+                    .font(.system(size: 20, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(ring.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
         }
     }
 
@@ -288,21 +271,25 @@ struct DiaryNutritionRingCard: View {
     }
 
     private var targetProtein: Int { target(goal.proteinPercent, perGram: 4) }
+    private var targetFat: Int { target(goal.fatPercent, perGram: 9) }
     private var targetCarbs: Int { target(goal.carbsPercent, perGram: 4) }
 
     private var accessibilitySummary: String {
         [
             "\(NSLocalizedString("diary.calories", comment: "Calories")) \(summary.calories)/\(goal.calories) \(kcalUnit)",
+            "\(NSLocalizedString("diary.protein", comment: "Protein")) \(summary.protein)/\(targetProtein) \(gramsUnit)",
             "\(NSLocalizedString("diary.carbs", comment: "Carbs")) \(summary.carbs)/\(targetCarbs) \(gramsUnit)",
-            "\(NSLocalizedString("diary.protein", comment: "Protein")) \(summary.protein)/\(targetProtein) \(gramsUnit)"
+            "\(NSLocalizedString("diary.fat", comment: "Fat")) \(summary.fat)/\(targetFat) \(gramsUnit)"
         ].joined(separator: ", ")
     }
 
     private struct MacroRing: Identifiable {
         let id: String
-        let percent: Double
+        let titleKey: String
+        let value: Int
+        let target: Int
+        let unit: String
         let color: Color
-        let track: Color
     }
 
     /// Uncapped: past 100% the arc keeps winding, and the shadowed leading cap

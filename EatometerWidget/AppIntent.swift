@@ -13,11 +13,7 @@ enum EatometerWidgetStore {
     static let waterWidgetStepKeyPrefix = "Eatometer.widget.waterStep."
     static let waterWidgetKind = "EatometerWidget"
     static let quickMealWidgetKind = "EatometerQuickMealWidget"
-    static let habitWidgetKind = "EatometerHabitWidget"
     static let nutritionWidgetKind = "EatometerNutritionWidget"
-    static let statsWidgetKind = "EatometerStatsWidget"
-    static let habitSnapshotKey = "Eatometer.widget.habits.snapshot"
-    static let pendingHabitCheckInsKey = "Eatometer.widget.pendingHabitCheckIns"
     static let defaultNutritionRingMetricIDs = ["calories", "protein", "fat"]
     static let defaultWaterWidgetStep = 200
 
@@ -68,15 +64,6 @@ enum EatometerWidgetStore {
         guard let defaults = sharedDefaults,
               let data = defaults.data(forKey: snapshotKey),
               let snapshot = try? JSONDecoder().decode(EatometerTodaySnapshot.self, from: data) else {
-            return nil
-        }
-        return snapshot
-    }
-
-    static func loadHabitSnapshot() -> EatometerHabitWidgetSnapshot? {
-        guard let defaults = sharedDefaults,
-              let data = defaults.data(forKey: habitSnapshotKey),
-              let snapshot = try? JSONDecoder().decode(EatometerHabitWidgetSnapshot.self, from: data) else {
             return nil
         }
         return snapshot
@@ -165,63 +152,6 @@ enum EatometerWidgetStore {
         }
     }
 
-    static func habitDayKey(for date: Date) -> String {
-        let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
-        guard let year = components.year, let month = components.month, let day = components.day else {
-            return dayKey(for: date)
-        }
-        return String(format: "%04d-%02d-%02d", year, month, day)
-    }
-
-    static func currentManualHabitStageDayKey(for habit: EatometerHabitWidgetHabit, at date: Date = .now) -> String? {
-        guard habit.trackingMode == "manual",
-              let startedAt = habit.attemptStartedAt else {
-            return nil
-        }
-        let elapsed = date.timeIntervalSince(startedAt)
-        let completedDays = Int(elapsed / 86_400)
-        guard completedDays > 0 else { return nil }
-        let stageDate = startedAt.addingTimeInterval(TimeInterval(completedDays - 1) * 86_400)
-        return habitDayKey(for: stageDate)
-    }
-
-    static func markHabitStage(habitID: String, attemptID: String, dayKey: String) {
-        guard let defaults = sharedDefaults else { return }
-
-        var pending: [PendingWidgetHabitCheckIn] = []
-        if let data = defaults.data(forKey: pendingHabitCheckInsKey),
-           let restored = try? JSONDecoder().decode([PendingWidgetHabitCheckIn].self, from: data) {
-            pending = restored
-        }
-
-        if !pending.contains(where: { $0.habitID == habitID && $0.attemptID == attemptID && $0.dayKey == dayKey }) {
-            pending.append(
-                PendingWidgetHabitCheckIn(
-                    id: UUID().uuidString,
-                    scopeUserID: currentScopeUserID(),
-                    habitID: habitID,
-                    attemptID: attemptID,
-                    dayKey: dayKey,
-                    createdAt: Date()
-                )
-            )
-        }
-
-        if let encoded = try? JSONEncoder().encode(pending) {
-            defaults.set(encoded, forKey: pendingHabitCheckInsKey)
-        }
-
-        if var snapshot = loadHabitSnapshot(),
-           let habitIndex = snapshot.habits.firstIndex(where: { $0.id == habitID }),
-           !snapshot.habits[habitIndex].checkedDayKeys.contains(dayKey) {
-            snapshot.habits[habitIndex].checkedDayKeys.append(dayKey)
-            snapshot.habits[habitIndex].checkInCount += 1
-            snapshot.updatedAt = Date()
-            if let encodedSnapshot = try? JSONEncoder().encode(snapshot) {
-                defaults.set(encodedSnapshot, forKey: habitSnapshotKey)
-            }
-        }
-    }
 }
 
 private struct PendingWidgetWaterExport: Codable {
@@ -230,35 +160,6 @@ private struct PendingWidgetWaterExport: Codable {
     let dayKey: String
     let deltaMilliliters: Int
     let totalMilliliters: Int
-    let createdAt: Date
-}
-
-struct EatometerHabitWidgetSnapshot: Codable {
-    var habits: [EatometerHabitWidgetHabit]
-    var updatedAt: Date
-}
-
-struct EatometerHabitWidgetHabit: Codable, Identifiable, Hashable {
-    let id: String
-    let name: String
-    let icon: String
-    let colorHex: String
-    let kind: String
-    let trackingMode: String
-    let targetDays: Int?
-    let attemptID: String?
-    let attemptStartedAt: Date?
-    let attemptEndedAt: Date?
-    var checkInCount: Int
-    var checkedDayKeys: [String]
-}
-
-struct PendingWidgetHabitCheckIn: Codable {
-    let id: String
-    let scopeUserID: String
-    let habitID: String
-    let attemptID: String
-    let dayKey: String
     let createdAt: Date
 }
 
@@ -287,6 +188,11 @@ struct EatometerMealCategorySummary: Codable {
     let id: String
     let title: String
     let symbolName: String
+    /// The calories this meal is planned to be, worked out by the app from the
+    /// meal's share of the daily goal. Zero when no share has been set.
+    var targetCalories: Int = 0
+    /// Eaten so far today, so the ring has something to fill.
+    var calories: Int = 0
 }
 
 struct EatometerQuickAddItem: Codable {
@@ -423,28 +329,6 @@ enum EatometerWidgetAccent: String {
 
 }
 
-enum EatometerStatsWidgetFocus: String, AppEnum {
-    case overview
-    case calories
-    case macros
-    case water
-    case streak
-
-    static var typeDisplayRepresentation: TypeDisplayRepresentation {
-        TypeDisplayRepresentation(name: "widget.intent.stats.focus")
-    }
-
-    static var caseDisplayRepresentations: [EatometerStatsWidgetFocus: DisplayRepresentation] {
-        [
-            .overview: DisplayRepresentation(title: "widget.intent.stats.focus.overview"),
-            .calories: DisplayRepresentation(title: "widget.intent.stats.focus.calories"),
-            .macros: DisplayRepresentation(title: "widget.intent.stats.focus.macros"),
-            .water: DisplayRepresentation(title: "widget.intent.stats.focus.water"),
-            .streak: DisplayRepresentation(title: "widget.intent.stats.focus.streak")
-        ]
-    }
-}
-
 struct WaterWidgetConfigurationIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "widget.intent.water.title"
     static let description = IntentDescription("widget.intent.water.description")
@@ -452,127 +336,18 @@ struct WaterWidgetConfigurationIntent: WidgetConfigurationIntent {
     init() {}
 }
 
-enum QuickMealQuickAddSource: String, AppEnum {
-    case mixed
-    case products
-    case recipes
-    case mealTemplates
-
-    static var typeDisplayRepresentation: TypeDisplayRepresentation {
-        TypeDisplayRepresentation(name: "widget.intent.quick_meal.source")
-    }
-
-    static var caseDisplayRepresentations: [QuickMealQuickAddSource: DisplayRepresentation] {
-        [
-            .mixed: DisplayRepresentation(title: "widget.intent.quick_meal.source.mixed"),
-            .products: DisplayRepresentation(title: "widget.intent.quick_meal.source.products"),
-            .recipes: DisplayRepresentation(title: "widget.intent.quick_meal.source.recipes"),
-            .mealTemplates: DisplayRepresentation(title: "widget.intent.quick_meal.source.meal_templates")
-        ]
-    }
-}
-
-enum QuickMealMealSlotLimit: String, AppEnum {
-    case four
-    case five
-    case six
-
-    var count: Int {
-        switch self {
-        case .four:
-            return 4
-        case .five:
-            return 5
-        case .six:
-            return 6
-        }
-    }
-
-    static var typeDisplayRepresentation: TypeDisplayRepresentation {
-        TypeDisplayRepresentation(name: "widget.intent.quick_meal.meal_slots")
-    }
-
-    static var caseDisplayRepresentations: [QuickMealMealSlotLimit: DisplayRepresentation] {
-        [
-            .four: DisplayRepresentation(title: "widget.intent.quick_meal.meal_slots.four"),
-            .five: DisplayRepresentation(title: "widget.intent.quick_meal.meal_slots.five"),
-            .six: DisplayRepresentation(title: "widget.intent.quick_meal.meal_slots.six")
-        ]
-    }
-}
-
+/// No parameters left.
+///
+/// The widget used to offer a choice of what to quick-add from — products,
+/// recipes, meal templates or a mix — and that list is gone: the tile is a row
+/// of meals now, and each ring opens the diary at its own meal. A setting that
+/// changes nothing is worse than no setting, because it is still shown when
+/// the widget is edited and still has to be answered.
 struct QuickMealWidgetConfigurationIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "widget.intent.quick_meal.title"
     static let description = IntentDescription("widget.intent.quick_meal.description")
 
-    @Parameter(title: "widget.intent.quick_meal.source")
-    var quickAddSource: QuickMealQuickAddSource?
-
-    @Parameter(title: "widget.intent.quick_meal.meal_slots")
-    var mealSlotLimit: QuickMealMealSlotLimit?
-
-    init() {
-        quickAddSource = .mixed
-        mealSlotLimit = .four
-    }
-
-    init(
-        quickAddSource: QuickMealQuickAddSource?,
-        mealSlotLimit: QuickMealMealSlotLimit? = nil
-    ) {
-        self.quickAddSource = quickAddSource
-        self.mealSlotLimit = mealSlotLimit ?? .four
-    }
-}
-
-struct HabitWidgetEntity: AppEntity {
-    static var typeDisplayRepresentation: TypeDisplayRepresentation {
-        TypeDisplayRepresentation(name: "widget.intent.habit.type")
-    }
-
-    static var defaultQuery = HabitWidgetEntityQuery()
-
-    let id: String
-    let name: String
-
-    var displayRepresentation: DisplayRepresentation {
-        DisplayRepresentation(title: "\(name)")
-    }
-}
-
-struct HabitWidgetEntityQuery: EntityQuery {
-    func entities(for identifiers: [HabitWidgetEntity.ID]) async throws -> [HabitWidgetEntity] {
-        allEntities(includeInactive: true).filter { identifiers.contains($0.id) }
-    }
-
-    func suggestedEntities() async throws -> [HabitWidgetEntity] {
-        allEntities(includeInactive: false)
-    }
-
-    func defaultResult() async -> HabitWidgetEntity? {
-        allEntities(includeInactive: false).first ?? allEntities(includeInactive: true).first
-    }
-
-    private func allEntities(includeInactive: Bool) -> [HabitWidgetEntity] {
-        let snapshot = EatometerWidgetStore.loadHabitSnapshot()
-        return (snapshot?.habits ?? [])
-            .filter { includeInactive || ($0.attemptStartedAt != nil && $0.attemptEndedAt == nil) }
-            .map { HabitWidgetEntity(id: $0.id, name: $0.name) }
-    }
-}
-
-struct HabitWidgetConfigurationIntent: WidgetConfigurationIntent {
-    static let title: LocalizedStringResource = "widget.intent.habit.title"
-    static let description = IntentDescription("widget.intent.habit.description")
-
-    @Parameter(title: "widget.intent.habit.habit")
-    var habit: HabitWidgetEntity?
-
     init() {}
-
-    init(habit: HabitWidgetEntity?) {
-        self.habit = habit
-    }
 }
 
 struct NutritionWidgetConfigurationIntent: WidgetConfigurationIntent {
@@ -580,22 +355,6 @@ struct NutritionWidgetConfigurationIntent: WidgetConfigurationIntent {
     static let description = IntentDescription("widget.intent.nutrition.description")
 
     init() {}
-}
-
-struct StatsWidgetConfigurationIntent: WidgetConfigurationIntent {
-    static let title: LocalizedStringResource = "widget.intent.stats.title"
-    static let description = IntentDescription("widget.intent.stats.description")
-
-    @Parameter(title: "widget.intent.stats.focus")
-    var focus: EatometerStatsWidgetFocus?
-
-    init() {
-        focus = .overview
-    }
-
-    init(focus: EatometerStatsWidgetFocus?) {
-        self.focus = focus ?? .overview
-    }
 }
 
 struct AdjustWaterIntakeIntent: AppIntent {
@@ -614,8 +373,7 @@ struct AdjustWaterIntakeIntent: AppIntent {
         EatometerWidgetStore.adjustWater(by: delta)
         for kind in [
             EatometerWidgetStore.waterWidgetKind,
-            EatometerWidgetStore.nutritionWidgetKind,
-            EatometerWidgetStore.statsWidgetKind
+            EatometerWidgetStore.nutritionWidgetKind
         ] {
             WidgetCenter.shared.reloadTimelines(ofKind: kind)
         }
@@ -623,33 +381,3 @@ struct AdjustWaterIntakeIntent: AppIntent {
     }
 }
 
-struct MarkHabitStageIntent: AppIntent {
-    static let title: LocalizedStringResource = "widget.intent.habit.mark_stage.title"
-
-    @Parameter(title: "widget.intent.habit.habit_id")
-    var habitID: String
-
-    @Parameter(title: "widget.intent.habit.attempt_id")
-    var attemptID: String
-
-    @Parameter(title: "widget.intent.habit.day")
-    var dayKey: String
-
-    init() {
-        habitID = ""
-        attemptID = ""
-        dayKey = ""
-    }
-
-    init(habitID: String, attemptID: String, dayKey: String) {
-        self.habitID = habitID
-        self.attemptID = attemptID
-        self.dayKey = dayKey
-    }
-
-    func perform() async throws -> some IntentResult {
-        EatometerWidgetStore.markHabitStage(habitID: habitID, attemptID: attemptID, dayKey: dayKey)
-        WidgetCenter.shared.reloadTimelines(ofKind: EatometerWidgetStore.habitWidgetKind)
-        return .result()
-    }
-}

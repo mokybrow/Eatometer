@@ -469,10 +469,15 @@ struct ContentView: View {
             Color.platformSystemBackground
                 .ignoresSafeArea()
 
-            Image("LaunchAppIcon")
+            Image(AppIconOption.current.previewImageName)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 116, height: 116)
+                // Clipped like the real thing. Without this the preview is a
+                // square, and the two launch overlays — this one and
+                // `LaunchSplashView` — showed the same icon with different
+                // corners depending on which one you happened to see.
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                 .shadow(color: Color.black.opacity(0.08), radius: 12, y: 6)
         }
         .allowsHitTesting(true)

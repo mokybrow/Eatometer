@@ -4534,23 +4534,13 @@ struct SharedRecipeImportConfirmationSheet: View {
     @ViewBuilder
     private var importButtonSection: some View {
         if existingRecipe == nil {
-            PressableIconButton(disabled: isLoading, action: importRecipe) {
-                if isLoading {
-                    ProgressView()
-                        .tint(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                } else {
-                    Label("recipe.import.add_button", systemImage: "plus.circle.fill")
-                        .font(.headline)
-                        .labelStyle(.titleAndIcon)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                }
-            }
-            .foregroundStyle(.white)
-            .background(.blue, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .opacity(isLoading ? 0.6 : 1)
+            EOPrimaryButton(
+                "recipe.import.add_button",
+                systemImage: "plus.circle.fill",
+                isLoading: isLoading,
+                fillsWidth: true,
+                action: importRecipe
+            )
         }
     }
 
@@ -4896,23 +4886,14 @@ struct SharedMealImportSheet: View {
     @ViewBuilder
     private var mealImportButtonSection: some View {
         if !alreadyImported {
-            PressableIconButton(disabled: isLoading || selectedCategory == nil, action: importSelectedMeal) {
-                if isLoading {
-                    ProgressView()
-                        .tint(Color.appAccentReadableText)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                } else {
-                    Label("meal.import.submit", systemImage: "plus.circle.fill")
-                        .labelStyle(.titleAndIcon)
-                        .font(.headline)
-                        .foregroundStyle(Color.appAccentReadableText)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                }
-            }
-            .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .opacity(isLoading ? 0.6 : 1)
+            EOPrimaryButton(
+                "meal.import.submit",
+                systemImage: "plus.circle.fill",
+                isEnabled: selectedCategory != nil,
+                isLoading: isLoading,
+                fillsWidth: true,
+                action: importSelectedMeal
+            )
         }
     }
 
@@ -5000,7 +4981,20 @@ struct SharedMealImportSheet: View {
             servingLabel: item.servingLabel,
             product: catalogService.productSummary(for: item)
         )
-        return "\(amountText) - \(item.calories)kc - \(item.protein)p - \(item.carbs)c - \(item.fat)f"
+        let nutritionText = String(
+            format: NSLocalizedString(
+                "meal.import.nutrition",
+                tableName: nil,
+                bundle: .main,
+                value: "%d kcal • P %d • F %d • C %d",
+                comment: "Meal import nutrition summary"
+            ),
+            item.calories,
+            item.protein,
+            item.fat,
+            item.carbs
+        )
+        return "\(amountText) · \(nutritionText)"
     }
 
     private var selectedTimeText: String {

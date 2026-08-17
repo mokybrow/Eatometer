@@ -47,7 +47,7 @@ struct SharedMealTemplateImportSheet: View {
             "mealtemplate.import.action",
             tableName: nil,
             bundle: .main,
-            value: "Add to Library",
+            value: "Import",
             comment: "Import shared ration button title"
         )
     }
@@ -205,23 +205,13 @@ struct SharedMealTemplateImportSheet: View {
     @ViewBuilder
     private var importButtonSection: some View {
         if existingMealTemplate == nil {
-            PressableIconButton(disabled: isLoading, action: importMealTemplate) {
-                if isLoading {
-                    ProgressView()
-                        .tint(Color.appAccentReadableText)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                } else {
-                    Label(importActionTitle, systemImage: "plus.circle.fill")
-                        .labelStyle(.titleAndIcon)
-                        .font(.headline)
-                        .foregroundStyle(Color.appAccentReadableText)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                }
-            }
-            .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .opacity(isLoading ? 0.6 : 1)
+            EOPrimaryButton(
+                title: Text(verbatim: importActionTitle),
+                systemImage: "plus.circle.fill",
+                isLoading: isLoading,
+                fillsWidth: true,
+                action: importMealTemplate
+            )
         }
     }
 
@@ -310,7 +300,20 @@ struct SharedMealTemplateImportSheet: View {
 
     private func itemMetaText(_ item: MealItemEntry) -> String {
         let amountText = amountText(for: item)
-        return "\(amountText) - \(item.calories)kc - \(item.protein)p - \(item.carbs)c - \(item.fat)f"
+        let nutritionText = String(
+            format: NSLocalizedString(
+                "meal.import.nutrition",
+                tableName: nil,
+                bundle: .main,
+                value: "%d kcal • P %d • F %d • C %d",
+                comment: "Meal import nutrition summary"
+            ),
+            item.calories,
+            item.protein,
+            item.fat,
+            item.carbs
+        )
+        return "\(amountText) · \(nutritionText)"
     }
 
     private func gramsText(_ value: Int) -> String {

@@ -37,7 +37,7 @@ struct SharedUserProductImportSheet: View {
             "product.import.action",
             tableName: nil,
             bundle: .main,
-            value: "Add to Library",
+            value: "Import",
             comment: "Import shared product button title"
         )
     }
@@ -217,23 +217,13 @@ struct SharedUserProductImportSheet: View {
     @ViewBuilder
     private var importButtonSection: some View {
         if existingProduct == nil {
-            PressableIconButton(disabled: isLoading, action: importProduct) {
-                if isLoading {
-                    ProgressView()
-                        .tint(Color.appAccentReadableText)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                } else {
-                    Label(importActionTitle, systemImage: "plus.circle.fill")
-                        .labelStyle(.titleAndIcon)
-                        .font(.headline)
-                        .foregroundStyle(Color.appAccentReadableText)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                }
-            }
-            .background(Color.appAccent, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .opacity(isLoading ? 0.6 : 1)
+            EOPrimaryButton(
+                title: Text(verbatim: importActionTitle),
+                systemImage: "plus.circle.fill",
+                isLoading: isLoading,
+                fillsWidth: true,
+                action: importProduct
+            )
         }
     }
 

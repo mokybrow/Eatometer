@@ -136,6 +136,14 @@ final class FoodDiaryService: ObservableObject {
         let id: String
         let title: String
         let symbolName: String
+        /// What this meal is meant to be, in calories.
+        ///
+        /// Resolved here rather than in the widget: the share is a percentage
+        /// of a daily goal, and the widget has no business knowing how the two
+        /// combine — it draws a ring against a target and needs the target.
+        let targetCalories: Int
+        /// Eaten so far today, so the ring has something to fill.
+        let calories: Int
     }
 
     private struct WidgetQuickAddItem: Codable {
@@ -2376,6 +2384,12 @@ final class FoodDiaryService: ObservableObject {
                 if let snapshot = catalogItemSnapshot(forRecipeID: recipeID, fallback: item.recipeSnapshot) {
                     payload.snapshot = snapshot
                 }
+            } else if let productSnapshot = item.productSnapshot,
+                      let snapshot = catalogItemSnapshot(forProductID: productSnapshot.id, fallback: productSnapshot) {
+                payload.snapshot = snapshot
+            } else if let recipeSnapshot = item.recipeSnapshot,
+                      let snapshot = catalogItemSnapshot(forRecipeID: recipeSnapshot.id, fallback: recipeSnapshot) {
+                payload.snapshot = snapshot
             }
 
             result.append(payload)
@@ -2692,12 +2706,15 @@ final class FoodDiaryService: ObservableObject {
         let resolvedUnit = mealUnit(from: item.unit)
         let decodedManualNutrition = manualNutrition(from: item.note)
         let fallbackName = decodedManualNutrition?.name ?? item.note.trimmingCharacters(in: .whitespacesAndNewlines)
-        let snapshot = item.hasSnapshot ? FoodCatalogService.linkedSummaries(from: item.snapshot) : (product: nil, recipe: nil)
+        let itemID = UUID(uuidString: item.id) ?? UUID()
+        let snapshot = item.hasSnapshot
+            ? FoodCatalogService.linkedSummaries(from: item.snapshot, fallbackID: itemID)
+            : (product: nil, recipe: nil)
 
         if let productID = UUID(uuidString: item.productID),
            let product = catalogService?.productSummary(id: productID) ?? snapshot.product {
             return MealItemEntry(
-                id: UUID(uuidString: item.id) ?? UUID(),
+                id: itemID,
                 name: product.name,
                 amount: item.amount,
                 unit: resolvedUnit,
@@ -2719,7 +2736,7 @@ final class FoodDiaryService: ObservableObject {
             if let catalogService {
                 return catalogService.makeMealItem(
                     from: recipe,
-                    id: UUID(uuidString: item.id) ?? UUID(),
+                    id: itemID,
                     amount: item.amount,
                     unit: resolvedUnit,
                     note: "",
@@ -2736,7 +2753,7 @@ final class FoodDiaryService: ObservableObject {
             }
 
             return MealItemEntry(
-                id: UUID(uuidString: item.id) ?? UUID(),
+                id: itemID,
                 name: recipe.title,
                 amount: item.amount,
                 unit: resolvedUnit,
@@ -2753,8 +2770,54 @@ final class FoodDiaryService: ObservableObject {
             )
         }
 
+        if let product = snapshot.product {
+            return MealItemEntry(
+                id: itemID,
+                name: product.name,
+                amount: item.amount,
+                unit: resolvedUnit,
+                note: "",
+                servingLabel: item.servingLabel,
+                caloriesPer100g: product.caloriesPer100g,
+                proteinPer100g: product.proteinPer100g,
+                fatPer100g: product.fatPer100g,
+                carbsPer100g: product.carbsPer100g,
+                productID: nil,
+                recipeID: nil,
+                productSnapshot: product,
+                recipeSnapshot: nil
+            )
+        }
+
+        if let recipe = snapshot.recipe {
+            let nutrition: NutritionSummary
+            switch resolvedUnit {
+            case .serving:
+                nutrition = recipe.nutritionPerServing
+            case .grams, .milliliters:
+                nutrition = recipe.resolvedNutritionPer100g
+            }
+
+            return MealItemEntry(
+                id: itemID,
+                name: recipe.title,
+                amount: item.amount,
+                unit: resolvedUnit,
+                note: "",
+                servingLabel: item.servingLabel,
+                caloriesPer100g: nutrition.calories,
+                proteinPer100g: nutrition.protein,
+                fatPer100g: nutrition.fat,
+                carbsPer100g: nutrition.carbs,
+                productID: nil,
+                recipeID: nil,
+                productSnapshot: nil,
+                recipeSnapshot: recipe
+            )
+        }
+
         return MealItemEntry(
-            id: UUID(uuidString: item.id) ?? UUID(),
+            id: itemID,
             name: unresolvedItemName(for: item, decodedName: fallbackName),
             amount: item.amount,
             unit: resolvedUnit,
@@ -3616,7 +3679,7 @@ final class FoodDiaryService: ObservableObject {
             loggingStreakDays: completedWidgetLoggingStreakDays(endingBefore: today, cacheSnapshot: cacheSnapshot),
             meals: makeWidgetMealSummaries(from: todayMeals),
             mealItems: makeWidgetMealItemSummaries(from: todayMeals),
-            mealCategories: makeWidgetMealCategories(),
+            mealCategories: makeWidgetMealCategories(from: todayMeals, goal: todayGoal),
             products: quickAddItems.products,
             recipes: quickAddItems.recipes,
             mealTemplates: quickAddItems.mealTemplates,
@@ -3748,7 +3811,22 @@ final class FoodDiaryService: ObservableObject {
         return "\(formattedFoodAmountValue(amount, maximumFractionDigits: 1)) \(item.unit.shortTitle)"
     }
 
-    private func makeWidgetMealCategories() -> [WidgetMealCategorySummary] {
+    /// The calories this meal is planned to account for.
+    ///
+    /// Zero when no share has been set, which the widget reads as "no target"
+    /// and draws as an empty ring rather than a full one.
+    private func targetCalories(for category: MealCategory, goal: DailyNutritionGoal) -> Int {
+        guard category.goalSharePercent > 0, goal.calories > 0 else { return 0 }
+        return Int((Double(goal.calories) * Double(category.goalSharePercent) / 100).rounded())
+    }
+
+    private func consumedCalories(for categoryID: String, in meals: [MealEntry]) -> Int {
+        meals
+            .filter { $0.mealCategoryID == categoryID }
+            .reduce(0) { $0 + $1.calories }
+    }
+
+    private func makeWidgetMealCategories(from meals: [MealEntry], goal: DailyNutritionGoal) -> [WidgetMealCategorySummary] {
         visibleMealCategories
             .sorted { lhs, rhs in
                 if lhs.sortOrder == rhs.sortOrder {
@@ -3760,7 +3838,9 @@ final class FoodDiaryService: ObservableObject {
             WidgetMealCategorySummary(
                 id: $0.id,
                 title: $0.displayTitle,
-                symbolName: $0.symbolName
+                symbolName: $0.symbolName,
+                targetCalories: targetCalories(for: $0, goal: goal),
+                calories: consumedCalories(for: $0.id, in: meals)
             )
         }
     }

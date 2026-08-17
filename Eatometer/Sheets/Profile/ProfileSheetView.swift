@@ -1672,10 +1672,35 @@ struct NotificationInboxView: View {
                     .transition(.opacity.combined(with: .move(edge: .leading)))
             }
 
+            // The unread mark, on the leading edge and holding its space when
+            // there is nothing to mark.
+            //
+            // It used to sit on the right, an eight-point dot tucked against
+            // the chevron, where it read as part of the disclosure rather than
+            // as a state of the message. Here it is where every mail client
+            // puts it — the first thing on the row — and the reserved width
+            // keeps titles on one line whether or not the dot is drawn.
+            Circle()
+                .fill(item.isRead ? Color.clear : EOTheme.Palette.accent)
+                .frame(width: 9, height: 9)
+                .padding(.leading, isSelecting ? 10 : EOTheme.Metrics.cardInset)
+                .padding(.trailing, -2)
+                .accessibilityHidden(true)
+
             EOListRow(
-                title: Text(verbatim: item.title.isEmpty ? fallbackTitle(for: item) : item.title),
-                subtitle: Text(verbatim: relativeDateText(for: item.receivedAt)),
-                accessory: .chevron
+                title: Text(verbatim: item.title.isEmpty ? fallbackTitle(for: item) : item.title)
+                    .fontWeight(item.isRead ? .regular : .semibold),
+                subtitle: Text(verbatim: relativeDateText(for: item.receivedAt))
+            ) {
+                EOChevron()
+            }
+            // Said aloud as well as drawn: the dot is the only thing
+            // distinguishing the two states, and it is invisible to VoiceOver.
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(
+                item.isRead
+                    ? Text(verbatim: item.title)
+                    : Text("profile.notifications.unread.accessibility \(item.title)")
             )
         }
         .contentShape(Rectangle())

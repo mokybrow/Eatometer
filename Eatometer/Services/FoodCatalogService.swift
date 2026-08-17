@@ -1782,7 +1782,11 @@ final class FoodCatalogService: ObservableObject {
 
     private func recipeMessagesSubtitle(for recipe: RecipeSummary) -> String {
         let kcal = NSLocalizedString("diary.kcal", comment: "Calories suffix")
-        return "\(recipe.caloriesPerServing) \(kcal) • \(max(recipe.servings, 1)) servings"
+        let servings = String.localizedStringWithFormat(
+            NSLocalizedString("messages.servings_count", comment: "How many servings a recipe makes"),
+            max(recipe.servings, 1)
+        )
+        return "\(recipe.caloriesPerServing) \(kcal) • \(servings)"
     }
 
     private func productMessagesSubtitle(for product: ProductSummary) -> String {
@@ -1797,7 +1801,11 @@ final class FoodCatalogService: ObservableObject {
 
     private func mealMessagesSubtitle(for meal: MealTemplateSummary) -> String {
         let kcal = NSLocalizedString("diary.kcal", comment: "Calories suffix")
-        return "\(meal.calories) \(kcal) • \(max(meal.items.count, 1)) items"
+        let items = String.localizedStringWithFormat(
+            NSLocalizedString("messages.items_count", comment: "How many items a meal has"),
+            max(meal.items.count, 1)
+        )
+        return "\(meal.calories) \(kcal) • \(items)"
     }
 
     private func normalizedRecipeEmoji(_ rawValue: String) -> String? {
@@ -2164,19 +2172,25 @@ final class FoodCatalogService: ObservableObject {
         )
     }
 
-    static func linkedSummaries(from snapshot: Food_CatalogItemSnapshot) -> (product: ProductSummary?, recipe: RecipeSummary?) {
+    static func linkedSummaries(
+        from snapshot: Food_CatalogItemSnapshot,
+        fallbackID: UUID? = nil
+    ) -> (product: ProductSummary?, recipe: RecipeSummary?) {
         switch snapshot.item {
         case .product(let product):
-            return (product: makeProductSummary(product), recipe: nil)
+            return (product: makeProductSummary(product, fallbackID: fallbackID), recipe: nil)
         case .recipe(let recipe):
-            return (product: nil, recipe: makeRecipeSummary(recipe))
+            return (product: nil, recipe: makeRecipeSummary(recipe, fallbackID: fallbackID))
         case nil:
             return (product: nil, recipe: nil)
         }
     }
 
-    private static func makeProductSummary(_ product: Food_LinkedProductSnapshot) -> ProductSummary? {
-        guard let id = UUID(uuidString: product.id) else { return nil }
+    private static func makeProductSummary(
+        _ product: Food_LinkedProductSnapshot,
+        fallbackID: UUID? = nil
+    ) -> ProductSummary? {
+        guard let id = UUID(uuidString: product.id) ?? fallbackID else { return nil }
         return ProductSummary(
             id: id,
             name: product.name,
@@ -2230,8 +2244,11 @@ final class FoodCatalogService: ObservableObject {
         )
     }
 
-    private static func makeRecipeSummary(_ recipe: Food_LinkedRecipeSnapshot) -> RecipeSummary? {
-        guard let id = UUID(uuidString: recipe.id) else { return nil }
+    private static func makeRecipeSummary(
+        _ recipe: Food_LinkedRecipeSnapshot,
+        fallbackID: UUID? = nil
+    ) -> RecipeSummary? {
+        guard let id = UUID(uuidString: recipe.id) ?? fallbackID else { return nil }
         return RecipeSummary(
             id: id,
             title: recipe.title,

@@ -13,8 +13,6 @@ struct EatometerWidgetBundle: WidgetBundle {
     var body: some Widget {
         EatometerWidget()
         EatometerQuickMealWidget()
-        EatometerHabitWidget()
         EatometerNutritionWidget()
-        EatometerStatsWidget()
     }
 }
