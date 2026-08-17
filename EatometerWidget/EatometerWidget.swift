@@ -711,20 +711,9 @@ struct NutritionWidgetView: View {
         WidgetLocalization.string("diary.carbs", defaultValue: "Carbs", comment: "Carbs")
     }
 
-    /// How much of the calorie goal has been eaten, as a whole percent.
-    ///
-    /// The lock screen has room for one number and no colour to carry a second
-    /// meaning, so the four metrics collapse to the one that answers "how is
-    /// today going".
-    private var caloriesPercent: Int {
-        guard entry.caloriesGoal > 0 else { return 0 }
-        return Int((Double(entry.calories) / Double(entry.caloriesGoal) * 100).rounded())
-    }
 
     var body: some View {
         switch family {
-        case .accessoryCircular:
-            lockScreenRing
         case .systemMedium:
             mediumLayout
         default:
@@ -793,37 +782,6 @@ struct NutritionWidgetView: View {
         .eatometerWidgetChrome(style: entry.style)
     }
 
-    /// Lock screen: one ring and a percentage, no colour and no chrome.
-    ///
-    /// The accessory families are rendered as a stencil — every colour is
-    /// replaced by the system's tint — so anything that relied on colour to
-    /// tell metrics apart would arrive as four identical grey rings. It also
-    /// must not carry a background of its own; `containerBackground` is what
-    /// the system fills in, and drawing a card here would be a grey box on the
-    /// wallpaper.
-    private var lockScreenRing: some View {
-        ZStack {
-            AccessoryWidgetBackground()
-
-            Circle()
-                .stroke(Color.primary.opacity(0.25), lineWidth: 5)
-
-            Circle()
-                .trim(from: 0, to: min(max(Double(caloriesPercent) / 100, 0), 1))
-                .stroke(Color.primary, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-
-            VStack(spacing: -1) {
-                Text(verbatim: "\(caloriesPercent)")
-                    .font(.system(size: 16, weight: .semibold).monospacedDigit())
-                Text(verbatim: "%")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(2)
-        .widgetAccentable()
-    }
 }
 
 struct EatometerNutritionWidget: Widget {
@@ -851,7 +809,7 @@ struct EatometerNutritionWidget: Widget {
         }
         .configurationDisplayName(displayNameText)
         .description(descriptionText)
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular])
+        .supportedFamilies([.systemSmall, .systemMedium])
         .containerBackgroundRemovable(false)
         .contentMarginsDisabled()
     }
@@ -906,17 +864,6 @@ struct EatometerNutritionWidget: Widget {
     NutritionWidgetEntry(
         date: .now,
         calories: 1200, protein: 50, fat: 30, carbs: 120,
-        caloriesGoal: 2000, proteinGoal: 150, fatGoal: 67, carbsGoal: 200,
-        style: .soft, accent: .app
-    )
-}
-
-#Preview("Nutrition Lock Screen", as: .accessoryCircular) {
-    EatometerNutritionWidget()
-} timeline: {
-    NutritionWidgetEntry(
-        date: .now,
-        calories: 1320, protein: 50, fat: 30, carbs: 120,
         caloriesGoal: 2000, proteinGoal: 150, fatGoal: 67, carbsGoal: 200,
         style: .soft, accent: .app
     )

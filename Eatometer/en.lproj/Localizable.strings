@@ -365,8 +365,6 @@
 "profile.nutrition.diet_plan" = "Diet plan";
 "profile.nutrition.meal_slots" = "Visible meal slots";
 "profile.nutrition.track_water" = "Track water";
-"profile.nutrition.water_widget_step" = "Water step";
-"profile.nutrition.water_step_value" = "%d ml";
 "diet.plan.balanced" = "Balanced";
 "diet.plan.balanced.subtitle" = "A steady split for everyday tracking and flexible meals.";
 "diet.plan.high_protein" = "High protein";
@@ -923,6 +921,8 @@
 "profile.name.help" = "After saving, the new name will be used throughout the platform.";
 "profile.email.help" = "After saving, we will send a confirmation link to the new email address. Notifications will use it after confirmation.";
 "water.settings.daily_plan" = "Daily Plan: %d ml";
+"water.settings.step" = "Step: %d ml";
+"water.settings.step.help" = "How much one tap adds, in the diary and on the widget. The step moves in 50 ml.";
 "water.settings.help" = "Set the amount of water you want to drink each day. The diary uses this value to calculate your progress.";
 "mealplan.calories" = "Calories";
 "mealplan.grams" = "%d g";

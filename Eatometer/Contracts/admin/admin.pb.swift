@@ -219,6 +219,14 @@ public nonisolated struct Admin_SupportRequest: @unchecked Sendable {
     set {_uniqueStorage()._answeredByUserID = newValue}
   }
 
+  /// Empty when the request came from somebody who was not signed in. Taken
+  /// from the caller's token, never from the request body: a support form that
+  /// lets you name yourself is a support form that lets you name anyone.
+  public var userID: String {
+    get {_storage._userID}
+    set {_uniqueStorage()._userID = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -310,11 +318,7 @@ public nonisolated struct Admin_AdminUser: Sendable {
 
   public var email: String = String()
 
-  public var username: String = String()
-
-  public var firstName: String = String()
-
-  public var lastName: String = String()
+  public var name: String = String()
 
   public var role: String = String()
 
@@ -703,7 +707,7 @@ nonisolated extension Admin_CreateSupportRequestResponse: SwiftProtobuf.Message,
 
 nonisolated extension Admin_SupportRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SupportRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}app_id\0\u{1}topic\0\u{1}status\0\u{1}name\0\u{1}email\0\u{1}subject\0\u{1}message\0\u{1}language\0\u{3}source_url\0\u{3}user_agent\0\u{3}created_at\0\u{3}updated_at\0\u{3}resolved_at\0\u{3}answer_subject\0\u{3}answer_message\0\u{3}answered_at\0\u{3}answered_by_user_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{3}app_id\0\u{1}topic\0\u{1}status\0\u{1}name\0\u{1}email\0\u{1}subject\0\u{1}message\0\u{1}language\0\u{3}source_url\0\u{3}user_agent\0\u{3}created_at\0\u{3}updated_at\0\u{3}resolved_at\0\u{3}answer_subject\0\u{3}answer_message\0\u{3}answered_at\0\u{3}answered_by_user_id\0\u{3}user_id\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -724,6 +728,7 @@ nonisolated extension Admin_SupportRequest: SwiftProtobuf.Message, SwiftProtobuf
     var _answerMessage: String = String()
     var _answeredAt: String = String()
     var _answeredByUserID: String = String()
+    var _userID: String = String()
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -752,6 +757,7 @@ nonisolated extension Admin_SupportRequest: SwiftProtobuf.Message, SwiftProtobuf
       _answerMessage = source._answerMessage
       _answeredAt = source._answeredAt
       _answeredByUserID = source._answeredByUserID
+      _userID = source._userID
     }
   }
 
@@ -788,6 +794,7 @@ nonisolated extension Admin_SupportRequest: SwiftProtobuf.Message, SwiftProtobuf
         case 16: try { try decoder.decodeSingularStringField(value: &_storage._answerMessage) }()
         case 17: try { try decoder.decodeSingularStringField(value: &_storage._answeredAt) }()
         case 18: try { try decoder.decodeSingularStringField(value: &_storage._answeredByUserID) }()
+        case 19: try { try decoder.decodeSingularStringField(value: &_storage._userID) }()
         default: break
         }
       }
@@ -850,6 +857,9 @@ nonisolated extension Admin_SupportRequest: SwiftProtobuf.Message, SwiftProtobuf
       if !_storage._answeredByUserID.isEmpty {
         try visitor.visitSingularStringField(value: _storage._answeredByUserID, fieldNumber: 18)
       }
+      if !_storage._userID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._userID, fieldNumber: 19)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -877,6 +887,7 @@ nonisolated extension Admin_SupportRequest: SwiftProtobuf.Message, SwiftProtobuf
         if _storage._answerMessage != rhs_storage._answerMessage {return false}
         if _storage._answeredAt != rhs_storage._answeredAt {return false}
         if _storage._answeredByUserID != rhs_storage._answeredByUserID {return false}
+        if _storage._userID != rhs_storage._userID {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -1057,7 +1068,7 @@ nonisolated extension Admin_ReplySupportRequestResponse: SwiftProtobuf.Message, 
 
 nonisolated extension Admin_AdminUser: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AdminUser"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}email\0\u{1}username\0\u{3}first_name\0\u{3}last_name\0\u{1}role\0\u{3}email_confirmed\0\u{3}is_banned\0\u{3}created_at\0\u{3}updated_at\0\u{3}last_activity_at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}email\0\u{1}name\0\u{2}\u{3}role\0\u{3}email_confirmed\0\u{3}is_banned\0\u{3}created_at\0\u{3}updated_at\0\u{3}last_activity_at\0\u{b}first_name\0\u{b}last_name\0\u{c}\u{4}\u{1}\u{c}\u{5}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1067,9 +1078,7 @@ nonisolated extension Admin_AdminUser: SwiftProtobuf.Message, SwiftProtobuf._Mes
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.email) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.username) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.firstName) }()
-      case 5: try { try decoder.decodeSingularStringField(value: &self.lastName) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.role) }()
       case 7: try { try decoder.decodeSingularBoolField(value: &self.emailConfirmed) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.isBanned) }()
@@ -1088,14 +1097,8 @@ nonisolated extension Admin_AdminUser: SwiftProtobuf.Message, SwiftProtobuf._Mes
     if !self.email.isEmpty {
       try visitor.visitSingularStringField(value: self.email, fieldNumber: 2)
     }
-    if !self.username.isEmpty {
-      try visitor.visitSingularStringField(value: self.username, fieldNumber: 3)
-    }
-    if !self.firstName.isEmpty {
-      try visitor.visitSingularStringField(value: self.firstName, fieldNumber: 4)
-    }
-    if !self.lastName.isEmpty {
-      try visitor.visitSingularStringField(value: self.lastName, fieldNumber: 5)
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 3)
     }
     if !self.role.isEmpty {
       try visitor.visitSingularStringField(value: self.role, fieldNumber: 6)
@@ -1121,9 +1124,7 @@ nonisolated extension Admin_AdminUser: SwiftProtobuf.Message, SwiftProtobuf._Mes
   public static func ==(lhs: Admin_AdminUser, rhs: Admin_AdminUser) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.email != rhs.email {return false}
-    if lhs.username != rhs.username {return false}
-    if lhs.firstName != rhs.firstName {return false}
-    if lhs.lastName != rhs.lastName {return false}
+    if lhs.name != rhs.name {return false}
     if lhs.role != rhs.role {return false}
     if lhs.emailConfirmed != rhs.emailConfirmed {return false}
     if lhs.isBanned != rhs.isBanned {return false}

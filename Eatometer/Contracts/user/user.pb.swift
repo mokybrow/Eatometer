@@ -445,6 +445,12 @@ public nonisolated struct User_EatometerNutritionSettings: Sendable {
 
   public var dietPlan: String = String()
 
+  /// How much one tap adds. Travels with the goal because it is the same
+  /// setting seen from the other end — the plan says where the day should
+  /// finish, the step says how it gets there — and because the widget on a
+  /// second device has no other way to learn it.
+  public var waterStepMilliliters: Int32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1539,7 +1545,7 @@ nonisolated extension User_EatometerMealSlot: SwiftProtobuf.Message, SwiftProtob
 
 nonisolated extension User_EatometerNutritionSettings: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EatometerNutritionSettings"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}default_goal\0\u{3}daily_goal_overrides\0\u{3}meal_slots\0\u{3}cheat_meal_days\0\u{3}calorie_onboarding_completed\0\u{3}updated_at\0\u{3}water_goal_milliliters\0\u{3}water_intake_by_day\0\u{3}diet_plan\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}default_goal\0\u{3}daily_goal_overrides\0\u{3}meal_slots\0\u{3}cheat_meal_days\0\u{3}calorie_onboarding_completed\0\u{3}updated_at\0\u{3}water_goal_milliliters\0\u{3}water_intake_by_day\0\u{3}diet_plan\0\u{3}water_step_milliliters\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1556,6 +1562,7 @@ nonisolated extension User_EatometerNutritionSettings: SwiftProtobuf.Message, Sw
       case 7: try { try decoder.decodeSingularInt32Field(value: &self.waterGoalMilliliters) }()
       case 8: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufInt32>.self, value: &self.waterIntakeByDay) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self.dietPlan) }()
+      case 10: try { try decoder.decodeSingularInt32Field(value: &self.waterStepMilliliters) }()
       default: break
       }
     }
@@ -1593,6 +1600,9 @@ nonisolated extension User_EatometerNutritionSettings: SwiftProtobuf.Message, Sw
     if !self.dietPlan.isEmpty {
       try visitor.visitSingularStringField(value: self.dietPlan, fieldNumber: 9)
     }
+    if self.waterStepMilliliters != 0 {
+      try visitor.visitSingularInt32Field(value: self.waterStepMilliliters, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1606,6 +1616,7 @@ nonisolated extension User_EatometerNutritionSettings: SwiftProtobuf.Message, Sw
     if lhs.waterGoalMilliliters != rhs.waterGoalMilliliters {return false}
     if lhs.waterIntakeByDay != rhs.waterIntakeByDay {return false}
     if lhs.dietPlan != rhs.dietPlan {return false}
+    if lhs.waterStepMilliliters != rhs.waterStepMilliliters {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

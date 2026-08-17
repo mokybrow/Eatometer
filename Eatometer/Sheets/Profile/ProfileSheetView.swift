@@ -702,31 +702,6 @@ struct ProfileSheetView: View {
                             .accentColor(.primary)
                         }
                         .buttonStyle(.plain)
-
-                        Divider().padding(.leading, 16)
-
-                        Menu {
-                            ForEach([50, 100, 150, 200, 250, 300, 500, 750, 1000], id: \.self) { value in
-                                Button {
-                                    appSettings.setWaterWidgetStepMilliliters(value)
-                                } label: {
-                                    if appSettings.waterWidgetStepMilliliters == value {
-                                        Label(
-                                            String(format: NSLocalizedString("profile.nutrition.water_step_value", comment: "Water step value"), value),
-                                            systemImage: "checkmark"
-                                        )
-                                    } else {
-                                        Text(String(format: NSLocalizedString("profile.nutrition.water_step_value", comment: "Water step value"), value))
-                                    }
-                                }
-                            }
-                        } label: {
-                            menuSettingRow(
-                                title: "profile.nutrition.water_widget_step",
-                                value: String(format: NSLocalizedString("profile.nutrition.water_step_value", comment: "Water step value"), appSettings.waterWidgetStepMilliliters)
-                            )
-                        }
-                        .buttonStyle(.plain)
                     }
                 }
                 .background(cardBackground)
@@ -1123,27 +1098,6 @@ struct ProfileSheetView: View {
                 .textInputAutocapitalization(.words)
                 .foregroundStyle(.blue)
                 .frame(maxWidth: 180)
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 16)
-        .contentShape(Rectangle())
-    }
-
-    private func menuSettingRow(title: String, value: String) -> some View {
-        HStack {
-            Text(LocalizedStringKey(title))
-                .foregroundStyle(.primary)
-
-            Spacer()
-
-            HStack(spacing: 6) {
-                Text(LocalizedStringKey(value))
-                    .foregroundStyle(.secondary)
-
-                Image(systemName: "chevron.down")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)

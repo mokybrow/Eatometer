@@ -230,13 +230,16 @@ private struct AdminUserRow: View {
     let isActionInFlight: Bool
     let onToggleBan: () -> Void
 
+    /// One name field now, where there used to be three.
+    ///
+    /// `AdminUser` carried `username`, `first_name` and `last_name`; the proto
+    /// has since reserved the last two and left a single `name`, which is what
+    /// users-service actually stores. Falling back to the email and then the id
+    /// as before: a row with no label at all is worse than a row labelled by
+    /// the only thing known about the person.
     private var displayName: String {
-        let name = [user.firstName, user.lastName]
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        let name = user.name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !name.isEmpty { return name }
-        if !user.username.isEmpty { return "@\(user.username)" }
         return user.email.isEmpty ? user.id : user.email
     }
 
@@ -257,11 +260,6 @@ private struct AdminUserRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
 
-                    if !user.username.isEmpty {
-                        Text("@\(user.username)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
                 }
 
                 Spacer(minLength: 8)

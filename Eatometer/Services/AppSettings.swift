@@ -190,9 +190,18 @@ final class AppSettings: ObservableObject {
         let normalized = normalizedCandidate.isEmpty ? "anon" : normalizedCandidate
         guard normalized != scopeUserID else { return }
         remoteSyncTask?.cancel()
+        let previousScope = scopeUserID
         scopeUserID = normalized
         syncWidgetScopeUserID()
-        reloadFromStorage()
+        // Anything chosen before the profile arrived was stored under "anon".
+        //
+        // The scope is only known once the cached or fetched profile yields a
+        // user id, and every screen is usable before that: a step set in the
+        // meantime was written to the anonymous key and then silently replaced
+        // by the default the moment the id showed up. Carried over rather than
+        // reloaded, and only in this direction — signing out goes through
+        // `resetToDefaults`, which is meant to forget.
+        reloadFromStorage(adoptingCurrentValues: previousScope == "anon" && normalized != "anon")
     }
 
     func resetToDefaults() {
@@ -220,26 +229,40 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    private func reloadFromStorage() {
+    /// - Parameter adoptingCurrentValues: when the new scope has never stored a
+    ///   value, keep the one already in memory instead of falling back to the
+    ///   default, and write it under the new key.
+    private func reloadFromStorage(adoptingCurrentValues: Bool = false) {
         let defaults = UserDefaults.standard
         listSort = .addedNewest
         defaults.set(listSort.rawValue, forKey: listSortKey)
         if let storedWaterTrackingValue = defaults.object(forKey: waterTrackingKey) as? Bool {
             isWaterTrackingEnabled = storedWaterTrackingValue
-        } else {
+        } else if !adoptingCurrentValues {
             isWaterTrackingEnabled = true
         }
-        let storedRingMetrics = defaults.stringArray(forKey: nutritionWidgetRingMetricsKey)?.compactMap(NutritionWidgetRingMetric.init(rawValue:)) ?? Self.defaultNutritionWidgetRingMetrics
-        nutritionWidgetRingMetrics = Self.sanitizedNutritionWidgetRingMetrics(storedRingMetrics)
+
+        if let storedRingMetrics = defaults.stringArray(forKey: nutritionWidgetRingMetricsKey)?
+            .compactMap(NutritionWidgetRingMetric.init(rawValue:)) {
+            nutritionWidgetRingMetrics = Self.sanitizedNutritionWidgetRingMetrics(storedRingMetrics)
+        } else if !adoptingCurrentValues {
+            nutritionWidgetRingMetrics = Self.defaultNutritionWidgetRingMetrics
+        }
+
         if defaults.object(forKey: waterWidgetStepKey) != nil {
             let storedStep = defaults.integer(forKey: waterWidgetStepKey)
             waterWidgetStepMilliliters = max(50, min(2000, storedStep))
-        } else {
+        } else if !adoptingCurrentValues {
             waterWidgetStepMilliliters = Self.defaultWaterWidgetStepMilliliters
         }
+
+        defaults.set(isWaterTrackingEnabled, forKey: waterTrackingKey)
+        defaults.set(nutritionWidgetRingMetrics.map(\.rawValue), forKey: nutritionWidgetRingMetricsKey)
+        defaults.set(waterWidgetStepMilliliters, forKey: waterWidgetStepKey)
         sharedDefaults?.set(nutritionWidgetRingMetrics.map(\.rawValue), forKey: nutritionWidgetRingMetricsKey)
         sharedDefaults?.set(waterWidgetStepMilliliters, forKey: waterWidgetStepKey)
         syncWidgetScopeUserID()
+        reloadWaterWidgetTimelines()
     }
 
     private static func initialScopeUserID() -> String {

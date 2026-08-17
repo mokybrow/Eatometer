@@ -488,6 +488,24 @@ final class FoodDiaryService: ObservableObject {
         }
     }
 
+    /// The goal and the step, saved together in one round trip.
+    ///
+    /// They are edited on one screen behind one Save button, and the step lives
+    /// in `AppSettings` while the goal lives here — saving them separately would
+    /// mean two pushes of the same settings object, the second one racing the
+    /// first and carrying whichever half of the change it happened to read.
+    func setWaterPlan(goalMilliliters: Int, stepMilliliters: Int) {
+        appSettings.setWaterWidgetStepMilliliters(stepMilliliters)
+        dailyWaterGoalMilliliters = max(0, goalMilliliters)
+        persistWaterGoal()
+        persistWidgetTodaySnapshot()
+        HabitLocalNotificationScheduler.shared.refreshWaterReminders(isWaterTrackingEnabled: dailyWaterGoalMilliliters > 0)
+        markLocalNutritionSettingsUpdatedNow()
+        Task {
+            await pushNutritionSettingsToRemote()
+        }
+    }
+
     func refreshWaterStateFromSharedStorage() {
         let restoredWaterIntake = FoodDiaryService.loadWaterIntake(scopeUserID: scopeUserID)
         let restoredWaterGoal = FoodDiaryService.loadWaterGoal(scopeUserID: scopeUserID)
@@ -1650,6 +1668,11 @@ final class FoodDiaryService: ObservableObject {
             dailyWaterGoalMilliliters = Int(nutritionSettings.waterGoalMilliliters)
             persistWaterGoal()
         }
+        // Zero means an older client that never sent one; leaving the local
+        // value alone is better than resetting a deliberate choice to nothing.
+        if nutritionSettings.waterStepMilliliters > 0 {
+            appSettings.setWaterWidgetStepMilliliters(Int(nutritionSettings.waterStepMilliliters))
+        }
         HabitLocalNotificationScheduler.shared.refreshWaterReminders(isWaterTrackingEnabled: dailyWaterGoalMilliliters > 0)
 
         persistMealCategories()
@@ -1677,6 +1700,7 @@ final class FoodDiaryService: ObservableObject {
             && ((cachedFoodSettings?.nutritionSettings.calorieOnboardingCompleted ?? false)
                 || (FoodDiaryService.loadCalorieOnboardingCompleted(scopeUserID: scopeUserID) == true))
         settings.waterGoalMilliliters = Int32(dailyWaterGoalMilliliters)
+        settings.waterStepMilliliters = Int32(appSettings.waterWidgetStepMilliliters)
         settings.dietPlan = dietPlan.rawValue
         return settings
     }

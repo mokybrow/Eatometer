@@ -363,8 +363,6 @@
 "profile.nutrition.diet_plan" = "План питания";
 "profile.nutrition.meal_slots" = "Приёмы пищи";
 "profile.nutrition.track_water" = "Отслеживать воду";
-"profile.nutrition.water_widget_step" = "Шаг добавления воды";
-"profile.nutrition.water_step_value" = "%d мл";
 "diet.plan.balanced" = "Сбалансированный";
 "diet.plan.balanced.subtitle" = "Ровное распределение для обычного дневника и гибкого питания.";
 "diet.plan.high_protein" = "Больше белка";
@@ -925,6 +923,8 @@
 "profile.name.help" = "После сохранения новое имя будет использоваться на всей платформе.";
 "profile.email.help" = "После сохранения мы отправим ссылку подтверждения на новую почту. После подтверждения она будет использоваться для уведомлений.";
 "water.settings.daily_plan" = "Дневной план: %d мл";
+"water.settings.step" = "Шаг добавления: %d мл";
+"water.settings.step.help" = "На столько меняется вода при одном нажатии — в дневнике и на виджете. Шаг меняется по 50 мл.";
 "water.settings.help" = "Укажите количество воды, которое хотите выпивать каждый день. По этому значению дневник рассчитывает прогресс.";
 "mealplan.calories" = "Калории";
 "mealplan.grams" = "%d г";
